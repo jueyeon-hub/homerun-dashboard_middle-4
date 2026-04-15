@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>홈런 학습 종합 대시보드 · 초등 vs 중등</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Square+AC:wght@400;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --surface2: #1e2230;
+  --border: rgba(255,255,255,0.07);
+  --text: #e8eaf0;
+  --muted: #6b7280;
+  --orange: #F04D22;
+  --orange-dim: rgba(240,77,34,0.12);
+  --blue: #4f8ef7;
+  --blue-dim: rgba(79,142,247,0.12);
+  --green: #34d399;
+  --yellow: #fbbf24;
+  --red: #f7594f;
+  --purple: #a78bfa;
+  --font-ko: 'Nanum Square AC', sans-serif;
+  --font-en: 'Nanum Square AC', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: var(--font-ko); background: var(--bg); color: var(--text); min-height:100vh; }
+
+/* ── Header ── */
+.header {
+  background: linear-gradient(135deg, #0d0f14 0%, #161920 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 40px;
+  display: flex; align-items: center; gap: 16px;
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.header-logo {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--orange), #ff8c61);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: white; font-family: var(--font-en); flex-shrink: 0;
+}
+.header-title { font-size: 18px; font-weight: 700; }
+.header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: var(--font-en); }
+.header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.header-badge {
+  background: var(--orange-dim); border: 1px solid rgba(240,77,34,0.3);
+  color: var(--orange); font-size: 10px; font-family: var(--font-en);
+  padding: 4px 12px; border-radius: 20px; white-space: nowrap;
+}
+
+/* ── Tab Bar ── */
+.tab-bar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 40px; display: flex; gap: 0; overflow-x: auto;
+}
+.tab-bar::-webkit-scrollbar { height: 0; }
+.tab-btn {
+  padding: 13px 18px; font-size: 13px; font-weight: 400;
+  color: var(--muted); background: none; border: none; cursor: pointer;
+  border-bottom: 2px solid transparent; white-space: nowrap;
+  transition: all .2s; font-family: var(--font-ko);
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
+.tab-btn .tag {
+  display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  margin-left: 4px; font-weight: 700; vertical-align: middle;
+}
+.tag-orange { background: var(--orange-dim); color: var(--orange); }
+.tag-blue { background: var(--blue-dim); color: var(--blue); }
+.tag-red { background: rgba(247,89,79,0.15); color: var(--red); }
+
+/* ── Content ── */
+.content { padding: 24px 40px; max-width: 1440px; margin: 0 auto; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Section titles ── */
+.section-title {
+  font-size: 17px; font-weight: 700; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title .bar {
+  width: 4px; height: 20px; border-radius: 2px;
+  background: linear-gradient(180deg, var(--orange), #ff8c61); flex-shrink: 0;
+}
+.section-sub { color: var(--muted); font-size: 12px; margin-bottom: 20px; font-family: var(--font-en); }
+
+/* ── KPI Grid ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 18px;
+  position: relative; overflow: visible; transition: transform 0.2s;
+}
+.kpi:hover { transform: translateY(-2px); }
+.kpi::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--kpi-color, var(--orange));
+}
+.kpi-label { font-size: 11px; color: var(--muted); font-weight: 400; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 7px; font-family: var(--font-en); }
+.kpi-value { font-size: 26px; font-weight: 700; font-family: var(--font-en); color: var(--kpi-text, var(--text)); line-height: 1; }
+.kpi-unit { font-size: 12px; color: var(--muted); margin-left: 2px; }
+.kpi-delta { font-size: 11px; margin-top: 5px; color: var(--muted); }
+.kpi-delta.down { color: var(--red); }
+.kpi-delta.up { color: var(--green); }
+.kpi-delta.warn { color: var(--yellow); }
+
+/* ── Chart grid ── */
+.chart-grid { display: grid; gap: 16px; margin-bottom: 20px; }
+.chart-grid-2 { grid-template-columns: 1fr 1fr; }
+.chart-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.chart-grid-wide { grid-template-columns: 2fr 1fr; }
+.chart-grid-wide2 { grid-template-columns: 1fr 2fr; }
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px;
+}
+.card.full { grid-column: 1 / -1; }
+.card-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.card-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; font-family: var(--font-en); }
+.chart-wrap { position: relative; }
+
+/* ── Legend ── */
+.legend { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); font-family: var(--font-en); }
+.legend-swatch { width: 18px; height: 3px; border-radius: 2px; }
+
+/* ── Insight grid ── */
+.insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.insight {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 18px;
+  border-left: 3px solid var(--i-color, var(--orange));
+}
+.insight-num { font-size: 11px; color: var(--muted); font-weight: 400; letter-spacing: 0.5px; margin-bottom: 7px; font-family: var(--font-en); text-transform: uppercase; }
+.insight-title { font-size: 14px; font-weight: 700; margin-bottom: 7px; }
+.insight-body { font-size: 13px; color: var(--muted); line-height: 1.75; }
+.insight strong { color: var(--text); font-weight: 700; }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: var(--surface2); color: var(--muted);
+  font-size: 11px; font-weight: 400; letter-spacing: 0.3px; text-transform: uppercase;
+  padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--border);
+  font-family: var(--font-en); white-space: nowrap;
+}
+thead th:first-child { text-align: left; }
+tbody td { padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: right; white-space: nowrap; }
+tbody td:first-child { text-align: left; font-weight: 400; }
+tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+/* ── Compare Split ── */
+.compare-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.compare-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+.compare-header { font-size: 11px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; font-family: var(--font-en); }
+
+/* ── Progress bars ── */
+.prog-wrap { margin: 5px 0; }
+.prog-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.prog-bar { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 3px; }
+
+/* ── Stat rows ── */
+.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.stat-row:last-child { border-bottom: none; }
+.stat-name { font-size: 12px; color: var(--muted); }
+.stat-val { font-size: 16px; font-weight: 700; font-family: var(--font-en); }
+
+/* ── Badge ── */
+.badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.badge-red { background: rgba(247,89,79,0.15); color: var(--red); }
+.badge-blue { background: var(--blue-dim); color: var(--blue); }
+.badge-green { background: rgba(52,211,153,0.1); color: var(--green); }
+.badge-orange { background: var(--orange-dim); color: var(--orange); }
+.badge-yellow { background: rgba(251,191,36,0.1); color: var(--yellow); }
+
+/* ── Diff chip ── */
+.diff { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-family: var(--font-en); font-weight: 400; display: inline-block; margin-top: 6px; }
+.diff-neg { background: rgba(247,89,79,0.12); color: var(--red); }
+.diff-pos { background: rgba(52,211,153,0.1); color: var(--green); }
+
+/* ── 해지율 특수 ── */
+.churn-highlight { color: var(--red); font-weight: 700; }
+.churn-good { color: var(--green); font-weight: 700; }
+
+/* ── Annotation ── */
+.annotation {
+  font-size: 12px; color: var(--muted); background: var(--surface2);
+  border-radius: 8px; padding: 10px 14px; margin-top: 12px; line-height: 1.7;
+}
+.annotation strong { color: var(--text); }
+
+/* ── Divider ── */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* ── 비교 KPI 카드 (side-by-side) ── */
+.cmp-kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+.cmp-kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; position: relative; overflow: visible;
+}
+.cmp-kpi::before { content: ''; position: absolute; top:0; left:0; right:0; height:3px; background: var(--ck-color, var(--orange)); }
+.cmp-kpi-label { font-size: 11px; color: var(--muted); font-weight: 400; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 10px; font-family: var(--font-en); }
+.cmp-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.cmp-item { flex: 1; display: flex; flex-direction: column; }
+.cmp-item-label { font-size: 10px; font-weight: 400; font-family: var(--font-en); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; height: 14px; }
+.cmp-item-val { font-size: 23px; font-weight: 700; font-family: var(--font-en); line-height: 1.1; }
+.cmp-vs { font-size: 11px; color: var(--muted); padding-top: 18px; flex-shrink: 0; }
+
+/* ── 태블릿 (≤1024px) ── */
+@media (max-width: 1024px) {
+  .content { padding: 20px 24px; }
+  .header  { padding: 16px 24px; }
+  .tab-bar { padding: 0 24px; }
+
+  .cmp-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  .chart-grid-3 { grid-template-columns: 1fr 1fr; }
+  .chart-grid-wide,
+  .chart-grid-wide2 { grid-template-columns: 1fr; }
+
+  .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .insight-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+  canvas { max-height: 260px; }
+}
+
+/* ── 모바일 (≤768px) ── */
+@media (max-width: 768px) {
+  .content { padding: 14px 16px; }
+  .header  { padding: 12px 16px; gap: 10px; }
+  .tab-bar { padding: 0 12px; }
+
+  .header-title  { font-size: 15px; }
+  .header-right  { display: none; }
+
+  .chart-grid-2,
+  .chart-grid-3,
+  .chart-grid-wide,
+  .chart-grid-wide2,
+  .compare-split,
+  .cmp-kpi-grid { grid-template-columns: 1fr; }
+
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .insight-grid { grid-template-columns: 1fr; }
+
+  .section-title { font-size: 15px; }
+  .kpi-value     { font-size: 22px; }
+  .card          { padding: 16px; }
+  .kpi           { padding: 14px 16px; }
+  .insight       { padding: 14px 16px; }
+
+  canvas { max-height: 220px; }
+
+  /* 테이블 모바일 스크롤 */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table       { min-width: 520px; font-size: 12px; }
+
+  /* 비교 KPI 카드 내부 */
+  .cmp-row    { gap: 8px; }
+  .cmp-item-val { font-size: 18px; }
+}
+
+/* ── 소형 모바일 (≤480px) ── */
+@media (max-width: 480px) {
+  .kpi-grid  { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-value { font-size: 20px; }
+  .tab-btn   { padding: 11px 12px; font-size: 11px; }
+
+  .header-title { font-size: 14px; }
+  .header-sub   { display: none; }
+
+  canvas { max-height: 200px; }
+}
+
+/* ── 지표 정의 툴팁 ── */
+.has-tip { position: relative; cursor: default; }
+.has-tip::after {
+  content: ' ⓘ';
+  font-size: 10px;
+  color: var(--muted);
+  opacity: 0.6;
+}
+.tip-box {
+  visibility: hidden; opacity: 0;
+  position: absolute; z-index: 9999;
+  bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
+  background: #1e2230;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #c9cdd6;
+  font-size: 11px; font-weight: 400;
+  line-height: 1.6;
+  padding: 8px 12px;
+  border-radius: 8px;
+  width: 220px;
+  white-space: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.tip-box::after {
+  content: '';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1e2230;
+}
+.has-tip:hover .tip-box { visibility: visible; opacity: 1; }
+
+/* ── 탭 출처 표시 ── */
+.tab-source {
+  position: absolute;
+  top: 12px;
+  right: 20px;
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-en);
+  opacity: 0.7;
+  text-align: right;
+  line-height: 1.5;
+  pointer-events: none;
+}
+.tab-panel { position: relative; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">HR</div>
+  <div>
+    <div class="header-title">홈런 학습 종합 대시보드</div>
+    <div class="header-sub">초등 86,807명 · 중등 19,974명 · 2025.01–12 · CX Team</div>
+  </div>
+  <div class="header-right">
+    <div class="header-badge">통합판 v1.0 · 2025.04</div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('compare')">🔀 초등 vs 중등 비교</button>
+  <button class="tab-btn" onclick="showTab('overview')">📊 중등 종합 개요</button>
+  <button class="tab-btn" onclick="showTab('churn_rate')">📉 중도해지율 분석</button>
+  <button class="tab-btn" onclick="showTab('timecorr')">⏱ 학습시간×수행률 <span class="tag tag-orange">중등</span></button>
+  <button class="tab-btn" onclick="showTab('churn')">📉 월별 이탈 패턴 <span class="tag tag-orange">중등</span></button>
+  <button class="tab-btn" onclick="showTab('heavy')">🏆 헤비유저 특성 <span class="tag tag-orange">중등</span></button>
+  <button class="tab-btn" onclick="showTab('outlier')">🔬 이상치 제거 <span class="tag tag-orange">중등</span></button>
+  <button class="tab-btn" onclick="showTab('dist')">📦 학습시간 분포 <span class="tag tag-orange">중등</span></button>
+  <button class="tab-btn" onclick="showTab('elemdetail')">🟠 초등 상세 <span class="tag tag-blue">초등</span></button>
+  <button class="tab-btn" onclick="showTab('cohort')">🔍 1월 회원 추적 분석</button>
+  <button class="tab-btn" onclick="showTab('churnreason')">🎯 해지 사유 분석</button>
+  <button class="tab-btn" onclick="showTab('insight')">💡 핵심 인사이트</button>
+</div>
+
+<div class="content">
+
+<!-- ══════════════════ TAB 0: 초등 vs 중등 비교 ══════════════════ -->
+
+<div class="tab-panel" id="tab-timecorr">
+  <div class="tab-source">📁 260409_CX팀_초중등_AI_데이터추출_raw_data_수정.xlsx (중등_raw data)</div>
+  <div class="section-title"><div class="bar"></div>학습시간 구간별 수행률 상관관계</div>
+  <div class="section-sub">중등 19,974명 · 학습시간 구간 7단계 분류 · 학생 기준</div>
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--orange);--kpi-text:var(--orange)"><div class="kpi-label"><span class="has-tip">실질 미이용자<span class="tip-box">수행률 0% + 60분 미만을 합산한 월평균 비율 (레코드 기준).<br>서비스를 실질적으로 활용하지 않은 학생.<br>수행률 80%+ 비율(38.4%)과 동일 기준.</span></span></div><div class="kpi-value">33.0<span class="kpi-unit">%</span></div><div class="kpi-delta warn">매월 학생 3명 중 1명꼴</div></div>
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)"><div class="kpi-label"><span class="has-tip">수행률 0%<span class="tip-box">해당 월 수행률이 0%인 레코드 비율.<br>미접속(23.4%) + 출석했지만 미완료(3.8%) 포함.<br>수행률 80%+와 동일 기준.</span></span></div><div class="kpi-value">26.9<span class="kpi-unit">%</span></div><div class="kpi-delta down">월평균 · 6월 33.8% 최고</div></div>
+    <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label"><span class="has-tip">60분 미만<span class="tip-box">해당 월 학습시간 1~59분인 레코드 비율.<br>학습은 했지만 사실상 미이용 수준.</span></span></div><div class="kpi-value">6.0<span class="kpi-unit">%</span></div><div class="kpi-delta warn">월평균 · 평균 수행률 20.6%</div></div>
+    <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label"><span class="has-tip">수행률 임계점<span class="tip-box">이 학습시간(분) 이상부터 수행률이 60%를 넘는 구간.<br>학습시간과 수행률 상관 분석에서 도출.</span></span></div><div class="kpi-value">240<span class="kpi-unit">분</span></div><div class="kpi-delta up">이 이상부터 수행률 60%+</div></div>
+  </div>
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">월별 미학습 학생 비율</div>
+    <div class="card-sub">수행률 0% · 60분 미만 2개 분류 합산 · 레코드 기준</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div>수행률 0%</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>60분 미만 (1~59분)</div>
+    </div>
+    <div class="chart-wrap"><canvas id="inactiveStack" height="240"></canvas></div>
+    <div class="annotation" style="margin-top:12px;">
+      <strong>월평균 합계 33.0%</strong> — 수행률 0% 26.9% · 60분 미만 6.0%<br>
+      ※ 수행률 0% = 미접속(23.4%) + 출석했지만 미완료(3.8%)
+    </div>
+  </div>
+  <div class="chart-grid chart-grid-wide">
+    <div class="card"><div class="card-title">학습시간 구간별 평균 수행률 · 출석률</div><div class="card-sub">구간이 높아질수록 선형에 가깝게 상승</div><div class="chart-wrap"><canvas id="corrBar" height="240"></canvas></div></div>
+    <div class="card"><div class="card-title">구간별 레코드 비중</div><div class="card-sub">204,750건 전체 기준</div><div class="chart-wrap"><canvas id="corrDoughnut" height="240"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">구간별 상세 데이터</div>
+    <div class="card-sub">중앙값 기준으로 수행률 격차가 더욱 극명</div>
+    <div class="table-wrap"><table><thead><tr><th>학습시간 구간</th><th>레코드수</th><th>비중</th><th>평균 수행률</th><th>중앙 수행률</th><th>평균 출석률</th></tr></thead><tbody id="corrTable"></tbody></table></div>
+  </div>
+  <div class="insight-grid">
+    <div class="insight" style="--i-color:var(--red)"><div class="insight-num">INSIGHT 11</div><div class="insight-title">240분이 핵심 임계점</div><div class="insight-body">240분 이상부터 수행률이 <strong>60%를 초과</strong>하며 의미있는 학습. 그 이하는 출석만 있고 효과 미미.</div></div>
+    <div class="insight" style="--i-color:var(--yellow)"><div class="insight-num">INSIGHT 12</div><div class="insight-title">미학습·미이용 학생 규모</div><div class="insight-body">연평균 0분 학생 <strong>5.4%(1,083명)</strong>, 60분 미만 전체 <strong>16.9%(3,383명)</strong>. 학생 기준으로 약 1/6이 사실상 미이용 상태.</div></div>
+    <div class="insight" style="--i-color:var(--blue)"><div class="insight-num">INSIGHT 13</div><div class="insight-title">상위 구간의 역설</div><div class="insight-body">960분+ 수행률 중앙값 <strong>98.2%</strong>. 가짜완료 포함 가능성으로 실제 학습 질은 별도 검증 필요.</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB: 중도해지율 분석 ══════════════════ -->
+
+<div class="tab-panel" id="tab-churn_rate">
+  <div class="tab-source">📁 25년_중도해지_중등.xlsx · 월별 중도해지 raw data 14개월 (2025.01~2026.02)</div>
+  <div class="section-title"><div class="bar"></div>중도해지율 분석</div>
+  <div class="section-sub">중도해지완료 / 회원수 기준 · 2025.01–12 · 중등 홈런 회원</div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)">
+      <div class="kpi-label"><span class="has-tip">연간 평균 해지율<span class="tip-box">월별 (수정)해지율의 연간 단순 평균.<br>(수정)해지율 = 해지완료 ÷ (회원수+해지완료) × 100.</span></span></div>
+      <div class="kpi-value">2.58<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta down">(수정)기준 · 원본 기준 2.65%</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--green);--kpi-text:var(--green)">
+      <div class="kpi-label"><span class="has-tip">최저 해지율<span class="tip-box">연중 (수정)해지율이 가장 낮은 달의 값.<br>(수정)해지율 = 해지완료 ÷ (회원수+해지완료) × 100.</span></span></div>
+      <div class="kpi-value">2.26<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta up">10월 · (수정)기준</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)">
+      <div class="kpi-label"><span class="has-tip">최고 해지율<span class="tip-box">연중 (수정)해지율이 가장 높은 달의 값. 3월 신학기 이후 급등.</span></span></div>
+      <div class="kpi-value">3.33<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta down">3월 · (수정)기준</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--yellow);--kpi-text:var(--yellow)">
+      <div class="kpi-label"><span class="has-tip">연간 총 해지완료<span class="tip-box">2025년 1~12월 중도해지 완료 건수 합계.<br>졸업만료·약정기간 만료 포함.</span></span></div>
+      <div class="kpi-value">4,754<span class="kpi-unit">건</span></div>
+      <div class="kpi-delta warn">1~12월 누적 합산</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--orange);--kpi-text:var(--orange)">
+      <div class="kpi-label"><span class="has-tip">회원수 변화<span class="tip-box">1월 기준 회원수 → 12월 회원수 추이.<br>해지·신규 가입·재계약이 반영된 실질 회원 규모.</span></span></div>
+      <div class="kpi-value">18,403→15,851</div>
+      <div class="kpi-delta down">▼ 2,552명 순감 (1→12월)</div>
+    </div>
+  </div>
+
+  <!-- 해지율 추이 + 해지건수 -->
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">월별 해지율 추이</div>
+      <div class="card-sub">원본 해지율 vs (수정)해지율 · 3월 최고, 10월 최저</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div>해지율(원본)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--orange)"></div>(수정)해지율</div>
+      </div>
+      <div class="chart-wrap"><canvas id="churnRateLine" height="220"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">월별 중도해지완료 건수 · 회원수 추이</div>
+      <div class="card-sub">회원수 감소와 해지건수의 관계</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div>해지완료 건수</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>회원수(우축)</div>
+      </div>
+      <div class="chart-wrap"><canvas id="churnCountBar" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 상세 테이블 -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">월별 중도해지 상세 데이터</div>
+    <div class="card-sub">원본 데이터 기준 · 1~2월, 11~12월 수식 표기 데이터는 % 변환 완료</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>월</th><th>중도해지완료</th><th>회원수</th><th>(수정)회원수</th>
+            <th>해지율</th><th>(수정)해지율</th><th>전월대비</th><th>구분</th>
+          </tr>
+        </thead>
+        <tbody id="churnRateTable"></tbody>
+      </table>
+    </div>
+    <div class="annotation">
+      <strong>수정 기준:</strong> (수정)회원수 = 회원수 + 해지완료 건수 (해지 처리된 인원 포함한 실질 모수). (수정)해지율 = 해지완료 / (수정)회원수 × 100.
+      3월 급등은 신학기 시작 후 적응 실패, 6~7월은 시험 기간 이탈과 일치.
+    </div>
+  </div>
+
+  <!-- 위험/안전 구간 시각화 -->
+  <div class="chart-grid chart-grid-wide2">
+    <div class="card">
+      <div class="card-title">분기별 해지율 비교</div>
+      <div class="card-sub">Q1이 가장 위험 — 3월 신학기 충격</div>
+      <div class="chart-wrap"><canvas id="churnQtr" height="220"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">해지율 × 학습 지표 연동 분석</div>
+      <div class="card-sub">해지율 급등 구간과 수행률 하락의 동조 패턴</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div>(수정)해지율 ×10</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>수행률</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--yellow)"></div>출석률</div>
+      </div>
+      <div class="chart-wrap"><canvas id="churnCorr" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 추가 분석 차트 -->
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">수행률 Lag-2 → 해지율 예측 분석</div>
+      <div class="card-sub">수행률 2개월 전 데이터와 당월 해지율 상관 r=0.763 — 조기 경보 가능</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>수행률 (2개월 앞선 데이터)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div>(수정)해지율</div>
+      </div>
+      <div class="chart-wrap"><canvas id="lagChart" height="220"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">회원수 잔존율 · 월별 신규유입</div>
+      <div class="card-sub">1월=100% 기준 잔존율 · 10~12월 신규의 97.5%가 초등→중등 전환생</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>잔존율(%)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--green);opacity:0.7"></div>신규유입(건)</div>
+      </div>
+      <div class="chart-wrap"><canvas id="retentionChart" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    
+  </div>
+</div>
+
+<!-- ══════════════════ TAB: 중등 종합 개요 ══════════════════ -->
+<div class="tab-panel" id="tab-overview">
+  <div class="tab-source">📁 초중등 AI 데이터추출 raw_data · 중도해지 raw data 2025.01~2026.02 · 학부모 설문 · 인터뷰 4건</div>
+  <div class="section-title"><div class="bar"></div>중등 종합 개요</div>
+  <div class="section-sub">중등 핵심 지표 · n=19,974명 · 204,750건</div>
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)"><div class="kpi-label"><span class="has-tip">중등 수행률<span class="tip-box">중등 전체 204,750건 레코드의 수행률 단순 평균.<br>완료된학습수 ÷ 계획된학습수 × 100.</span></span></div><div class="kpi-value">50.3<span class="kpi-unit">%</span></div><div class="kpi-delta down">▼ 20.7%p vs 초등(71.0%)</div></div>
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)"><div class="kpi-label"><span class="has-tip">중등 출석률<span class="tip-box">중등 월별 레코드의 출석률 단순 평균.<br>해당 월에 1회 이상 학습한 날 비율.</span></span></div><div class="kpi-value">46.2<span class="kpi-unit">%</span></div><div class="kpi-delta down">▼ 24.7%p vs 초등(71.5%)</div></div>
+    <div class="kpi" style="--kpi-color:var(--yellow);--kpi-text:var(--yellow)"><div class="kpi-label"><span class="has-tip">월평균 학습시간<span class="tip-box">중등 월별 학습시간(분)의 단순 평균.<br>0분 포함 전체 기준. 중앙값은 345분으로 평균보다 낮음.</span></span></div><div class="kpi-value">609<span class="kpi-unit">분</span></div><div class="kpi-delta down">▼ 32.3% vs 초등(899분)</div></div>
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)"><div class="kpi-label"><span class="has-tip">최저 수행률 (12월)<span class="tip-box">연중 수행률이 가장 낮은 달.<br>12월 신규 전환생 대거 유입으로 전체 평균 최저점 도달.</span></span></div><div class="kpi-value">41.2<span class="kpi-unit">%</span></div><div class="kpi-delta down">▼ 연간 최저점</div></div>
+    <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label"><span class="has-tip">개별 학습시간 중앙값<span class="tip-box">학생별 월 학습시간의 중앙값(50%ile).<br>평균(609분) 대비 낮은 345분 — 헤비유저 왜곡 제거한 실제 대표값.</span></span></div><div class="kpi-value">345<span class="kpi-unit">분</span></div><div class="kpi-delta warn">평균 609분 — 헤비유저 왜곡</div></div>
+  </div>
+  <div class="kpi-grid" style="margin-top:0;">
+    <div class="kpi" style="--kpi-color:var(--orange);--kpi-text:var(--orange)"><div class="kpi-label"><span class="has-tip">실질 미이용자<span class="tip-box">수행률 0% + 60분 미만을 합산한 월평균 비율 (레코드 기준).<br>서비스를 실질적으로 활용하지 않은 학생.<br>수행률 80%+ 비율(38.4%)과 동일 기준.</span></span></div><div class="kpi-value">33.0<span class="kpi-unit">%</span></div><div class="kpi-delta warn">매월 학생 3명 중 1명꼴</div></div>
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)"><div class="kpi-label"><span class="has-tip">수행률 0%<span class="tip-box">해당 월 수행률이 0%인 레코드 비율.<br>미접속(23.4%) + 출석했지만 미완료(3.8%) 포함.<br>수행률 80%+와 동일 기준.</span></span></div><div class="kpi-value">26.9<span class="kpi-unit">%</span></div><div class="kpi-delta down">월평균 · 6월 33.8% 최고</div></div>
+    <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label"><span class="has-tip">60분 미만<span class="tip-box">해당 월 학습시간 1~59분인 레코드 비율.<br>학습은 했지만 사실상 미이용 수준.</span></span></div><div class="kpi-value">6.0<span class="kpi-unit">%</span></div><div class="kpi-delta warn">월평균 · 평균 수행률 20.6%</div></div>
+  </div>
+  <div class="chart-grid chart-grid-2">
+    <div class="card"><div class="card-title">초등 vs 중등 지표 레이더</div><div class="card-sub">연평균 기준 · 5개 핵심 지표</div><div class="chart-wrap"><canvas id="overviewRadar" height="260"></canvas></div></div>
+    <div class="card"><div class="card-title">중등 월별 수행률 · 출석률 추이</div><div class="card-sub">2025.01~12 · 개별 학생 데이터 기준</div><div class="chart-wrap"><canvas id="overviewMonthly" height="260"></canvas></div></div>
+  </div>
+  <div class="insight-grid">
+    
+  </div>
+</div>
+
+<!-- ══════════════════ TAB: 초등 vs 중등 비교 ══════════════════ -->
+
+<div class="tab-panel active" id="tab-compare">
+  <div class="tab-source">📁 260409_CX팀_초중등_AI_데이터추출_raw_data_수정.xlsx</div>
+  <div class="section-title"><div class="bar"></div>초등 vs 중등 직접 비교</div>
+  <div class="section-sub">동일 기간(2025.01–12) · 핵심 지표 Side-by-Side · n=106,781명</div>
+
+  <div class="cmp-kpi-grid">
+    <div class="cmp-kpi" style="--ck-color:var(--orange)">
+      <div class="kpi-label"><span class="has-tip">평균 수행률<span class="tip-box">계획된 학습 콘텐츠 중 실제 완료한 비율.<br>완료된학습수 ÷ 계획된학습수 × 100.<br>0점도 완료로 기록될 수 있어 실제 학습 품질보다 높게 나올 수 있음.</span></span></div>
+      <div class="cmp-row">
+        <div class="cmp-item"><div class="cmp-item-label" style="color:var(--orange)">초등</div><div class="cmp-item-val" style="color:var(--orange)">71.0<span style="font-size:12px;color:var(--muted)">%</span></div></div>
+        <div class="cmp-vs">vs</div>
+        <div class="cmp-item">
+          <div class="cmp-item-label" style="color:var(--blue)">중등</div>
+          <div class="cmp-item-val" style="color:var(--blue)">50.3<span style="font-size:12px;color:var(--muted)">%</span></div>
+          <div class="diff diff-neg" style="margin-top:4px">▼ 20.7%p</div>
+        </div>
+      </div>
+    </div>
+    <div class="cmp-kpi" style="--ck-color:var(--green)">
+      <div class="kpi-label"><span class="has-tip">평균 출석률<span class="tip-box">해당 월에 1회 이상 학습한 날의 비율.<br>실제 접속·학습 여부를 반영하는 참여도 지표.</span></span></div>
+      <div class="cmp-row">
+        <div class="cmp-item"><div class="cmp-item-label" style="color:var(--orange)">초등</div><div class="cmp-item-val" style="color:var(--orange)">71.5<span style="font-size:12px;color:var(--muted)">%</span></div></div>
+        <div class="cmp-vs">vs</div>
+        <div class="cmp-item">
+          <div class="cmp-item-label" style="color:var(--blue)">중등</div>
+          <div class="cmp-item-val" style="color:var(--blue)">46.2<span style="font-size:12px;color:var(--muted)">%</span></div>
+          <div class="diff diff-neg" style="margin-top:4px">▼ 24.7%p</div>
+        </div>
+      </div>
+    </div>
+    <div class="cmp-kpi" style="--ck-color:var(--yellow)">
+      <div class="kpi-label"><span class="has-tip">평균 학습시간<span class="tip-box">월 총 학습시간(분)의 단순 평균.<br>헤비유저가 평균을 끌어올려 왜곡 가능.<br>중앙값이 더 실제에 가까움.</span></span></div>
+      <div class="cmp-row">
+        <div class="cmp-item"><div class="cmp-item-label" style="color:var(--orange)">초등</div><div class="cmp-item-val" style="color:var(--orange)">901<span style="font-size:12px;color:var(--muted)">분</span></div></div>
+        <div class="cmp-vs">vs</div>
+        <div class="cmp-item">
+          <div class="cmp-item-label" style="color:var(--blue)">중등</div>
+          <div class="cmp-item-val" style="color:var(--blue)">609<span style="font-size:12px;color:var(--muted)">분</span></div>
+          <div class="diff diff-neg" style="margin-top:4px">▼ 32.3% 적음</div>
+        </div>
+      </div>
+    </div>
+    <div class="cmp-kpi" style="--ck-color:var(--purple)">
+      <div class="kpi-label"><span class="has-tip">수행률 80%+ 비율<span class="tip-box">월 수행률이 80% 이상인 레코드의 비율.<br>꾸준히 학습 계획을 이행하는 학생 비중.</span></span></div>
+      <div class="cmp-row">
+        <div class="cmp-item"><div class="cmp-item-label" style="color:var(--orange)">초등</div><div class="cmp-item-val" style="color:var(--orange)">59.3<span style="font-size:12px;color:var(--muted)">%</span></div></div>
+        <div class="cmp-vs">vs</div>
+        <div class="cmp-item">
+          <div class="cmp-item-label" style="color:var(--blue)">중등</div>
+          <div class="cmp-item-val" style="color:var(--blue)">38.4<span style="font-size:12px;color:var(--muted)">%</span></div>
+          <div class="diff diff-neg" style="margin-top:4px">▼ 20.9%p</div>
+        </div>
+      </div>
+    </div>
+    <div class="cmp-kpi" style="--ck-color:var(--red)">
+      <div class="kpi-label"><span class="has-tip">수행률 0% 비율<span class="tip-box">해당 월 수행률이 0%인 레코드 비율 (레코드 기준).<br>수행률 80%+ 비율과 동일 기준.<br>중등 기준: 미접속(23.4%) + 출석했지만 미완료(3.5%) 포함.</span></span></div>
+      <div class="cmp-row">
+        <div class="cmp-item">
+          <div class="cmp-item-label" style="color:var(--orange)">초등</div>
+          <div class="cmp-item-val" style="color:var(--orange)">16.7<span style="font-size:12px;color:var(--muted)">%</span></div>
+        </div>
+        <div class="cmp-vs">vs</div>
+        <div class="cmp-item">
+          <div class="cmp-item-label" style="color:var(--red)">중등</div>
+          <div class="cmp-item-val" style="color:var(--red)">26.9<span style="font-size:12px;color:var(--muted)">%</span></div>
+          <div class="diff diff-neg" style="margin-top:4px">▲ 10.2%p 높음</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">수행률 월별 추이 비교</div>
+      <div class="card-sub">Monthly task completion rate · 초등 vs 중등</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--orange)"></div>초등</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>중등</div>
+      </div>
+      <div class="chart-wrap"><canvas id="cmp-perf" height="200"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">출석률 · 학습시간 월별 추이 비교</div>
+      <div class="card-sub">출석률 & 월평균 학습시간(÷10) · 초등 vs 중등</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--orange)"></div>초등 출석률</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>중등 출석률</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--orange);opacity:0.4"></div>초등 학습시간÷10</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue);opacity:0.4"></div>중등 학습시간÷10</div>
+      </div>
+      <div class="chart-wrap"><canvas id="cmp-att-time" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">수행률 구간 분포 비교</div>
+      <div class="card-sub">레코드 비율 기준 · 초등 vs 중등</div>
+      <div class="chart-wrap"><canvas id="cmp-dist" height="220"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">주요 지표 레이더 비교</div>
+      <div class="card-sub">5개 지표 종합 프로파일 · 100점 기준 정규화</div>
+      <div class="chart-wrap"><canvas id="cmp-radar" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-title" style="margin-bottom:4px;"><div class="bar"></div>수행률 구간 × 주요 지표 교차표</div>
+  <div class="section-sub">초등 · 중등 나란히 비교</div>
+  <div class="compare-split">
+    <div class="compare-panel" style="border-top:3px solid var(--orange)">
+      <div class="compare-header" style="color:var(--orange)">🟠 초등 Elementary (n=86,807)</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>수행률 구간</th><th>비율</th><th>출석률</th><th>학습시간</th><th>스스로학습</th></tr></thead>
+          <tbody>
+            <tr><td><span style="color:#FF5A5A">0–20%</span></td><td>16.7%</td><td>17.7</td><td>80분</td><td>13.9</td></tr>
+            <tr><td><span style="color:#FFAA5A">20–40%</span></td><td>5.8%</td><td>45.3</td><td>395분</td><td>17.2</td></tr>
+            <tr><td><span style="color:var(--yellow)">40–60%</span></td><td>7.3%</td><td>59.6</td><td>615분</td><td>22.5</td></tr>
+            <tr><td><span style="color:#5BCC8A">60–80%</span></td><td>10.9%</td><td>71.5</td><td>848분</td><td>27.9</td></tr>
+            <tr><td><span style="color:var(--green)">80–100%</span></td><td style="font-weight:700;color:var(--green)">59.3%</td><td>86.4</td><td>1,225분</td><td>43.1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="compare-panel" style="border-top:3px solid var(--blue)">
+      <div class="compare-header" style="color:var(--blue)">🔵 중등 Middle School (n=19,974)</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>수행률 구간</th><th>비율</th><th>출석률</th><th>학습시간</th><th>스스로학습</th></tr></thead>
+          <tbody>
+            <tr><td><span style="color:#FF5A5A">0–20%</span></td><td style="font-weight:700;color:var(--red)">36.5%</td><td>10.0</td><td>78분</td><td>1.0</td></tr>
+            <tr><td><span style="color:#FFAA5A">20–40%</span></td><td>7.8%</td><td>38.6</td><td>386분</td><td>1.4</td></tr>
+            <tr><td><span style="color:var(--yellow)">40–60%</span></td><td>7.9%</td><td>50.6</td><td>574분</td><td>1.4</td></tr>
+            <tr><td><span style="color:#5BCC8A">60–80%</span></td><td>9.4%</td><td>62.4</td><td>789분</td><td>1.6</td></tr>
+            <tr><td><span style="color:var(--green)">80–100%</span></td><td>38.4%</td><td>77.3</td><td>1,136분</td><td>1.8</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">상관계수 비교 — 초등</div>
+      <div class="card-sub">Pearson r · 수행률 기준 4개 지표</div>
+      <div class="chart-wrap"><canvas id="cmp-corr-elem" height="180"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">상관계수 비교 — 중등</div>
+      <div class="card-sub">스스로학습 상관 r=0.034 — 중등 자기주도학습 수행률과 거의 무관</div>
+      <div class="chart-wrap"><canvas id="cmp-corr-mid" height="180"></canvas></div>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    
+  </div>
+</div>
+
+<!-- ══════════════════ TAB: 월별 이탈 패턴 ══════════════════ -->
+<div class="tab-panel" id="tab-churn">
+  <div class="tab-source">📁 260409_CX팀_초중등_AI_데이터추출_raw_data_수정.xlsx (중등_raw data)</div>
+  <div class="section-title"><div class="bar"></div>월별 이탈 패턴 (개별 학생 기준)</div>
+  <div class="section-sub">학습시간 0분 전환 · 완전이탈 정의: 마지막 학습 후 미복귀 · n=19,974명</div>
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)"><div class="kpi-label"><span class="has-tip">완전이탈 (12월 전)<span class="tip-box">12월 이전에 마지막 학습 기록이 남은 후 복귀 없이 종료한 학생 수.</span></span></div><div class="kpi-value">35.8<span class="kpi-unit">%</span></div><div class="kpi-delta down">7,151명</div></div>
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)"><div class="kpi-label"><span class="has-tip">최고 미학습률 (12월)<span class="tip-box">월별 0분 미학습 레코드 비율이 가장 높은 달 (레코드 기준).<br>※ 학생 기준 연평균 0분은 5.4%(1,083명).</span></span></div><div class="kpi-value">42.6<span class="kpi-unit">%</span></div><div class="kpi-delta down">7,755건 0분 (레코드 기준)</div></div>
+    <div class="kpi" style="--kpi-color:var(--yellow)"><div class="kpi-label"><span class="has-tip">이탈 전 학습 감소율<span class="tip-box">완전이탈 직전 3개월간 학습시간이 감소한 평균 비율.</span></span></div><div class="kpi-value">59.1<span class="kpi-unit">%</span></div><div class="kpi-delta warn">3→1개월 중앙값 감소</div></div>
+    <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label"><span class="has-tip">최대 이탈 구간 (9월)<span class="tip-box">월별 완전이탈 건수가 가장 많은 달. 여름방학 이후 복귀 실패로 9월 최다 이탈.</span></span></div><div class="kpi-value">1,702<span class="kpi-unit">명</span></div><div class="kpi-delta down">9월 — 연간 최다</div></div>
+    <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label"><span class="has-tip">12월까지 활성 유지<span class="tip-box">전체 학생 중 12월까지 학습을 이어간 학생 비율.</span></span></div><div class="kpi-value">64.2<span class="kpi-unit">%</span></div><div class="kpi-delta up">12,823명</div></div>
+  </div>
+  <div class="card" style="margin-bottom:20px;"><div class="card-title">완전이탈 월별 분포 + 활성 학생 추이</div><div class="card-sub">마지막 학습 후 미복귀 기준 · 7,151명</div><div class="chart-wrap"><canvas id="churnCombo" height="240"></canvas></div></div>
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">월별 상세 미학습 데이터</div>
+    <div class="card-sub">학생×월 기준 · 3개 분류 합산</div>
+    <div class="table-wrap"><table><thead><tr><th>월</th><th>총 학생</th><th>수행률 0%</th><th>60분 미만</th><th>합계(미학습)</th><th>평균 수행률</th><th>중앙 학습시간</th></tr></thead><tbody id="churnTable"></tbody></table></div>
+  </div>
+  <div class="insight-grid">
+    <div class="insight" style="--i-color:var(--red)"><div class="insight-num">INSIGHT 14</div><div class="insight-title">9월이 최대 이탈 구간</div><div class="insight-body">완전이탈 기준 9월이 <strong>1,702명(23.8%)</strong>으로 연중 최다. 여름방학 후 복귀 실패 패턴. 1~3월은 578명(8.1%).</div></div>
+    <div class="insight" style="--i-color:var(--yellow)"><div class="insight-num">INSIGHT 15</div><div class="insight-title">이탈 2개월 전부터 신호 포착 가능</div><div class="insight-body">이탈 전 3→1개월 중앙값 <strong>368→144분 (61% 감소)</strong>. 2개월 연속 30% 이상 감소 시 자동 알림 설계 가능.</div></div>
+    <div class="insight" style="--i-color:var(--blue)"><div class="insight-num">INSIGHT 16</div><div class="insight-title">헤비유저도 갑작스러운 이탈 6.7%</div><div class="insight-body">이탈 직전 600분+ 이용자도 <strong>6.7%</strong>가 완전이탈. "너무 잘 하니까 더 잘하기 위해 학원으로 이동" — 이 선생님</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB 5: 헤비유저 ══════════════════ -->
+<div class="tab-panel" id="tab-heavy">
+  <div class="tab-source">📁 260409_CX팀_초중등_AI_데이터추출_raw_data_수정.xlsx (중등_raw data)</div>
+  <div class="section-title"><div class="bar"></div>헤비유저 특성 분석</div>
+  <div class="section-sub">월평균 학습시간 상위 10% · 기준 1,332분 이상 · n=1,998명</div>
+  <div class="compare-split">
+    <div class="compare-panel" style="border-top:3px solid var(--blue)">
+      <div class="compare-header" style="color:var(--blue)">🏆 헤비유저 (상위 10%) · n=1,998명 · 기준 1,332분+</div>
+      <div class="stat-row"><span class="stat-name">평균 수행률</span><span class="stat-val" style="color:var(--blue)">85.8%</span></div>
+      <div class="stat-row"><span class="stat-name">평균 출석률</span><span class="stat-val" style="color:var(--blue)">82.8%</span></div>
+      <div class="stat-row"><span class="stat-name">평균 학습시간</span><span class="stat-val" style="color:var(--blue)">1,934분</span></div>
+      <div class="stat-row"><span class="stat-name">스스로학습수</span><span class="stat-val" style="color:var(--blue)">4.0건</span></div>
+      <div style="margin-top:14px;">
+        <div class="prog-wrap"><div class="prog-label"><span>수행률</span><span>85.8%</span></div><div class="prog-bar"><div class="prog-fill" style="width:85.8%;background:var(--blue)"></div></div></div>
+        <div class="prog-wrap"><div class="prog-label"><span>출석률</span><span>82.8%</span></div><div class="prog-bar"><div class="prog-fill" style="width:82.8%;background:var(--blue)"></div></div></div>
+      </div>
+    </div>
+    <div class="compare-panel" style="border-top:3px solid var(--muted)">
+      <div class="compare-header" style="color:var(--muted)">👤 일반유저 (하위 90%) · n=17,976명</div>
+      <div class="stat-row"><span class="stat-name">평균 수행률</span><span class="stat-val">46.1%</span></div>
+      <div class="stat-row"><span class="stat-name">평균 출석률</span><span class="stat-val">41.6%</span></div>
+      <div class="stat-row"><span class="stat-name">평균 학습시간</span><span class="stat-val">439분</span></div>
+      <div class="stat-row"><span class="stat-name">스스로학습수</span><span class="stat-val">1.1건</span></div>
+      <div style="margin-top:14px;">
+        <div class="prog-wrap"><div class="prog-label"><span>수행률</span><span>46.1%</span></div><div class="prog-bar"><div class="prog-fill" style="width:46.1%;background:var(--muted)"></div></div></div>
+        <div class="prog-wrap"><div class="prog-label"><span>출석률</span><span>41.6%</span></div><div class="prog-bar"><div class="prog-fill" style="width:41.6%;background:var(--muted)"></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="chart-grid chart-grid-2">
+    <div class="card"><div class="card-title">헤비유저 vs 일반유저 레이더</div><div class="card-sub">4개 지표 비교</div><div class="chart-wrap"><canvas id="heavyRadar" height="240"></canvas></div></div>
+    <div class="card"><div class="card-title">헤비유저가 전체 평균을 왜곡하는 구조</div><div class="card-sub">10%가 평균을 얼마나 끌어올리는가</div><div class="chart-wrap"><canvas id="heavyBar" height="240"></canvas></div></div>
+  </div>
+  <div class="insight-grid">
+    <div class="insight" style="--i-color:var(--blue)"><div class="insight-num">INSIGHT 17</div><div class="insight-title">수행률 격차 39.7%p</div><div class="insight-body">헤비유저(85.8%) vs 일반유저(46.1%) 격차 <strong>39.7%p</strong>. 전체 평균 50.3%는 혼재 결과.</div></div>
+    <div class="insight" style="--i-color:var(--green)"><div class="insight-num">INSIGHT 18</div><div class="insight-title">스스로학습 3.5배 차이</div><div class="insight-body">헤비유저 4.0건 vs 일반유저 1.1건. <strong>자기주도 학습 습관</strong>이 핵심 분기 변수.</div></div>
+    <div class="insight" style="--i-color:var(--yellow)"><div class="insight-num">INSIGHT 19</div><div class="insight-title">평균 왜곡 구조적 문제</div><div class="insight-body">헤비유저 1,934분이 전체 평균을 <strong>176분 이상 끌어올림</strong>. 평균 KPI는 이탈 규모 과소평가.</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB 6: 이상치 제거 ══════════════════ -->
+<div class="tab-panel" id="tab-outlier">
+  <div class="tab-source">📁 260409_CX팀_초중등_AI_데이터추출_raw_data_수정.xlsx (중등_raw data)</div>
+  <div class="section-title"><div class="bar"></div>이상치 제거 후 재집계</div>
+  <div class="section-sub">IQR 방법 · 상한 2,264분 초과 건 제거 · 9,070건(4.4%) 제거</div>
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label"><span class="has-tip">제거 건수<span class="tip-box">통계적 이상치(극단적 학습시간)로 분류되어 분석에서 제외된 레코드 수.</span></span></div><div class="kpi-value">9,070<span class="kpi-unit">건</span></div><div class="kpi-delta down">전체의 4.4%</div></div>
+    <div class="kpi" style="--kpi-color:var(--yellow)"><div class="kpi-label"><span class="has-tip">이상치 상한<span class="tip-box">이상치 판별 기준값(분). 이 값 초과 레코드는 분석에서 제외.</span></span></div><div class="kpi-value">2,264<span class="kpi-unit">분</span></div><div class="kpi-delta warn">Q3 + 1.5×IQR</div></div>
+    <div class="kpi" style="--kpi-color:var(--green);--kpi-text:var(--green)"><div class="kpi-label"><span class="has-tip">평균 학습시간 변화<span class="tip-box">이상치 제거 전후 월평균 학습시간 차이. 이상치가 평균에 미치는 왜곡 크기.</span></span></div><div class="kpi-value">609→499<span class="kpi-unit">분</span></div><div class="kpi-delta up">▼ 110분 감소</div></div>
+    <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label"><span class="has-tip">중앙값 변화<span class="tip-box">이상치 제거 전후 중앙값 변화. 중앙값은 이상치에 덜 민감하므로 변화가 작음.</span></span></div><div class="kpi-value">345→307<span class="kpi-unit">분</span></div><div class="kpi-delta warn">소폭 변화</div></div>
+  </div>
+  <div class="card" style="margin-bottom:20px;"><div class="card-title">이상치 제거 전후 월별 평균 학습시간 비교</div><div class="card-sub">이상치 제거 후가 실제 일반 학생의 패턴에 더 가까움</div><div class="chart-wrap"><canvas id="outlierLine" height="220"></canvas></div></div>
+  <div class="chart-grid chart-grid-2">
+    <div class="card"><div class="card-title">이상치 제거 전후 수행률 비교</div><div class="card-sub">이상치 제거 시 수행률도 소폭 하락</div><div class="chart-wrap"><canvas id="outlierPerf" height="200"></canvas></div></div>
+    <div class="card"><div class="card-title">이상치 제거 후 중앙 학습시간</div><div class="card-sub">5~7월 및 10월 중앙값 급락 더욱 명확</div><div class="chart-wrap"><canvas id="outlierMedian" height="200"></canvas></div></div>
+  </div>
+  <div class="annotation"><strong>방법론 주석:</strong> Q1=6분, Q3=909분, IQR=903분. 상한 = 909 + 1.5×903 = 2,264분 초과 건 제거. 제거된 9,070건에는 17,477분 등 극단적 헤비유저 기록 포함.</div>
+</div>
+
+<!-- ══════════════════ TAB 7: 학습시간 분포 ══════════════════ -->
+<div class="tab-panel" id="tab-dist">
+  <div class="tab-source">📁 260409_CX팀_초중등_AI_데이터추출_raw_data_수정.xlsx (중등_raw data)</div>
+  <div class="section-title"><div class="bar"></div>개별 학습시간 분포</div>
+  <div class="section-sub">이상치 제거 후 기준 · 0~2,000분 · 100분 단위</div>
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)"><div class="kpi-label"><span class="has-tip">0분 미학습<span class="tip-box">연평균 학습시간이 0분인 학생 비율 (학생 기준).<br>계정은 있지만 실제 학습 이력이 전혀 없는 학생.</span></span></div><div class="kpi-value">1,083<span class="kpi-unit">명</span></div><div class="kpi-delta down">5.4% — 학생 기준</div></div>
+    <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label"><span class="has-tip">분포 최빈 구간<span class="tip-box">가장 많은 학생이 분포하는 월 학습시간 구간.</span></span></div><div class="kpi-value">0~100<span class="kpi-unit">분</span></div><div class="kpi-delta warn">이상치 제거 후 기준</div></div>
+    <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label"><span class="has-tip">중앙값<span class="tip-box">학생별 월 학습시간을 크기순으로 나열했을 때 정중앙 값. 평균보다 현실에 가까운 대표값.</span></span></div><div class="kpi-value">307<span class="kpi-unit">분</span></div><div class="kpi-delta up">이상치 제거 후</div></div>
+    <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label"><span class="has-tip">120분 이상 비중<span class="tip-box">월 학습시간 120분(2시간) 이상인 레코드 비율.</span></span></div><div class="kpi-value">64.8<span class="kpi-unit">%</span></div><div class="kpi-delta up">다수는 의미있는 학습량</div></div>
+  </div>
+  <div class="card" style="margin-bottom:20px;"><div class="card-title">학습시간 분포 히스토그램 (0~2,000분)</div><div class="card-sub">우측 꼬리가 긴 분포 — 소수 헤비유저가 평균을 크게 왜곡</div><div class="chart-wrap"><canvas id="distHist" height="240"></canvas></div></div>
+  <div class="chart-grid chart-grid-2">
+    <div class="card"><div class="card-title">구간별 비중 (전체 204,750건)</div><div class="card-sub">7개 구간 분류</div><div class="chart-wrap"><canvas id="distPie" height="240"></canvas></div></div>
+    <div class="card"><div class="card-title">학습시간 구간별 평균 수행률</div><div class="card-sub">시간이 늘수록 수행률 거의 선형 증가</div><div class="chart-wrap"><canvas id="distPerf" height="240"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB 8: 초등 상세 ══════════════════ -->
+<div class="tab-panel" id="tab-elemdetail">
+  <div class="tab-source">📁 260409_CX팀_초중등_AI_데이터추출_raw_data_수정.xlsx (초등_raw data)</div>
+  <div class="section-title"><div class="bar"></div>초등 상세 분포 분석</div>
+  <div class="section-sub">n=86,807명 · 776,443건 · 2025.01–12</div>
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--orange);--kpi-text:var(--orange)"><div class="kpi-label"><span class="has-tip">총 학생 수<span class="tip-box">해당 분석 기간의 고유 학생 수.</span></span></div><div class="kpi-value">86,807</div></div>
+    <div class="kpi" style="--kpi-color:var(--orange);--kpi-text:var(--orange)"><div class="kpi-label"><span class="has-tip">평균 수행률<span class="tip-box">계획된 학습 콘텐츠 중 실제 완료한 비율.<br>완료된학습수 ÷ 계획된학습수 × 100.<br>0점도 완료로 기록될 수 있어 실제 학습 품질보다 높게 나올 수 있음.</span></span></div><div class="kpi-value">71.0<span class="kpi-unit">%</span></div></div>
+    <div class="kpi" style="--kpi-color:var(--green);--kpi-text:var(--green)"><div class="kpi-label"><span class="has-tip">평균 출석률<span class="tip-box">해당 월에 1회 이상 학습한 날의 비율.<br>실제 접속·학습 여부를 반영하는 참여도 지표.</span></span></div><div class="kpi-value">71.5<span class="kpi-unit">%</span></div></div>
+    <div class="kpi" style="--kpi-color:var(--yellow);--kpi-text:var(--yellow)"><div class="kpi-label"><span class="has-tip">평균 학습시간<span class="tip-box">월 총 학습시간(분)의 단순 평균.<br>헤비유저가 평균을 끌어올려 왜곡 가능.<br>중앙값이 더 실제에 가까움.</span></span></div><div class="kpi-value">901<span class="kpi-unit">분</span></div></div>
+    <div class="kpi" style="--kpi-color:var(--purple)"><div class="kpi-label"><span class="has-tip">80%+ 수행률 비율<span class="tip-box">수행률 80% 이상 레코드의 비율. 적극적 학습 참여 학생 비중.</span></span></div><div class="kpi-value">59.3<span class="kpi-unit">%</span></div><div class="kpi-delta up">과반이 고수행 그룹</div></div>
+  </div>
+  <div class="chart-grid chart-grid-2">
+    <div class="card"><div class="card-title">초등 수행률 구간 분포</div><div class="card-sub">레코드 수 기준 · 776,443건</div><div class="chart-wrap"><canvas id="elem-perf-dist" height="240"></canvas></div></div>
+    <div class="card"><div class="card-title">수행률 구간 × 출석률 (초등)</div><div class="card-sub">구간별 출석률 평균</div><div class="chart-wrap"><canvas id="elem-cross-att" height="240"></canvas></div></div>
+    <div class="card"><div class="card-title">수행률 구간 × 학습시간 (초등)</div><div class="card-sub">구간별 평균 학습시간(분)</div><div class="chart-wrap"><canvas id="elem-cross-time" height="240"></canvas></div></div>
+    <div class="card"><div class="card-title">초등 월별 수행률 추이</div><div class="card-sub">연간 ±7%p 이내 안정적 패턴</div><div class="chart-wrap"><canvas id="elem-monthly" height="240"></canvas></div></div>
+  </div>
+  <div class="insight-grid">
+    <div class="insight" style="--i-color:var(--orange)"><div class="insight-num">INSIGHT 20</div><div class="insight-title">80%+ 그룹이 과반(59.3%)</div><div class="insight-body">초등 수행률 분포는 고수행 그룹 집중. <strong>스스로학습 평균 43.1회</strong>가 이 그룹을 뒷받침.</div></div>
+    <div class="insight" style="--i-color:var(--green)"><div class="insight-num">INSIGHT 21</div><div class="insight-title">연간 안정적 패턴</div><div class="insight-body">수행률 변동 <strong>±7%p 이내</strong>. 방학 시즌에도 큰 이탈 없이 유지되는 안정적 구조.</div></div>
+    <div class="insight" style="--i-color:var(--yellow)"><div class="insight-num">INSIGHT 22</div><div class="insight-title">출석률-수행률 r=0.81</div><div class="insight-body">초등에서 출석률이 수행률의 선행 지표(Lag1 r=0.625). 중등은 반대 — 수행률이 출석률을 예측(Lag1 r=0.885). <strong>초등은 출석 감소, 중등은 수행률 하락</strong>이 개입 트리거.</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB: 1월 회원 추적 분석 ══════════════════ -->
+<div class="tab-panel" id="tab-cohort">
+  <div class="tab-source">📁 260409_CX팀_초중등_AI_데이터추출_raw_data_수정.xlsx · 초중등_상세_0410.xlsx</div>
+  <div class="section-title"><div class="bar"></div>1월 회원 추적 분석 · 수행률 반등의 진짜 원인</div>
+  <div class="section-sub">1월 가입 회원 순수 추적 × 초등→중등 전환 학생 분해 · n=19,974명</div>
+
+  <!-- 핵심 요약 KPI -->
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)">
+      <div class="kpi-label"><span class="has-tip">1월 회원 12월 잔존율<span class="tip-box">1월에 등록한 18,352명 중 12월까지 서비스를 유지한 학생 비율.</span></span></div>
+      <div class="kpi-value">69.9<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta down">18,352명 → 12,823명 · 30.1% 이탈</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)">
+      <div class="kpi-label"><span class="has-tip">1월 회원 수행률 변화<span class="tip-box">1월 회원들의 수행률이 1월→12월 동안 얼마나 변화했는지.</span></span></div>
+      <div class="kpi-value">67% → 41%</div>
+      <div class="kpi-delta down">잔류 학생도 ▼26%p 하락 지속</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--orange);--kpi-text:var(--orange)">
+      <div class="kpi-label"><span class="has-tip">10~12월 신규 중 전환생 비율<span class="tip-box">10~12월 신규 유입 학생 중 초등에서 중등으로 전환한 학생 비율.</span></span></div>
+      <div class="kpi-value">97.5<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta warn">5,745명 중 5,599명이 초등→중등</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--green);--kpi-text:var(--green)">
+      <div class="kpi-label"><span class="has-tip">전환생 초등 시절 수행률<span class="tip-box">초등→중등 전환 학생들이 초등 재학 시 기록한 평균 수행률.</span></span></div>
+      <div class="kpi-value">75.0<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta up">전체 초등 평균 71% 대비 우수</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--blue)">
+      <div class="kpi-label"><span class="has-tip">전환생 중등 첫달 수행률<span class="tip-box">초등→중등 전환 학생들의 중등 첫 달 수행률. 전환 직후 적응 수준.</span></span></div>
+      <div class="kpi-value">80.7<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta up">전체 중등 평균 50.3% 대비 +30.4%p</div>
+    </div>
+  </div>
+
+  <!-- 핵심 차트 2종 -->
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">1월 회원 순수 추적 — 수행률 · 잔존율</div>
+      <div class="card-sub">신규 유입 영향 완전 제거 · 기존 학생만의 실제 궤적</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>전체 평균 수행률 (신규 포함)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--orange)"></div>1월 회원 수행률 (기존만)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--red);opacity:0.5"></div>1월 회원 잔존율(%)</div>
+      </div>
+      <div class="chart-wrap"><canvas id="cohortLine" height="240"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">월별 신규 유입 구성 — 초등→중등 전환 vs 순수신규</div>
+      <div class="card-sub">10~12월 신규의 97.5%가 초등 홈런 경험 있는 전환생</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--orange)"></div>초등→중등 전환</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--muted, #6b7280)"></div>순수 신규</div>
+      </div>
+      <div class="chart-wrap"><canvas id="cohortNewBar" height="240"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 전환생 프로파일 비교 -->
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">초등→중등 전환생 프로파일</div>
+      <div class="card-sub">초등 시절 vs 중등 첫달 vs 전체 중등 평균 비교</div>
+      <div class="chart-wrap"><canvas id="cohortProfile" height="240"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">수행률 반등의 실체 분해</div>
+      <div class="card-sub">전체 평균 vs 1월 회원(기존) vs 전환생(신규) — 착시 구조 시각화</div>
+      <div class="chart-wrap"><canvas id="cohortDecomp" height="240"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 이탈 학생 vs 잔류 학생 수행률 -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">월별 이탈 학생 vs 잔류 학생 수행률 비교</div>
+    <div class="card-sub">이탈 직전월 수행률 — 낮을수록 "공부 안 하는 학생이 빠진" composition effect 존재</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>월</th><th>이탈수</th><th>잔류수</th><th>이탈 직전 수행률</th><th>이탈 직전 학습시간</th><th>이탈 중 0분 비율</th><th>잔류 수행률</th><th>격차</th></tr>
+        </thead>
+        <tbody id="cohortTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight" style="--i-color:var(--red)">
+      <div class="insight-num">INSIGHT 23</div>
+      <div class="insight-title">9~12월 수행률 반등은 완전한 착시</div>
+      <div class="insight-body">1월 회원만 추적하면 수행률이 <strong>66% → 43%로 연중 하락 지속</strong>. 반등처럼 보이는 건 초등에서 잘 하던 학생들이 선행으로 중등에 올라오면서 평균을 끌어올린 것.</div>
+    </div>
+    <div class="insight" style="--i-color:var(--orange)">
+      <div class="insight-num">INSIGHT 24</div>
+      <div class="insight-title">10~12월 신규의 97.5%가 초등→중등 전환생</div>
+      <div class="insight-body">순수 신규는 2.5%(146명)에 불과. 전환생들은 <strong>초등 시절 수행률 75%, 학습시간 1,020분</strong>으로 평균 이상 우량 학생. 이들이 80%대 수행률로 들어와 전체 평균을 왜곡.</div>
+    </div>
+    <div class="insight" style="--i-color:var(--yellow)">
+      <div class="insight-num">INSIGHT 25</div>
+      <div class="insight-title">기존 회원 30.1%가 1년 내 이탈</div>
+      <div class="insight-body">1월 18,352명 → 12월 12,823명. 남아있는 학생들도 수행률 계속 하락. <strong>"전체 지표가 좋아 보인다"는 판단은 위험</strong> — 반드시 1월 회원 단위 추적 필요.</div>
+    </div>
+    <div class="insight" style="--i-color:var(--blue)">
+      <div class="insight-num">INSIGHT 26</div>
+      <div class="insight-title">전환생이 다음 해 이탈 뇌관</div>
+      <div class="insight-body">초등에서 잘 하던 학생이 중등 전환 후 <strong>기존 패턴(하락→이탈)을 그대로 반복</strong>할 가능성 높음. 전환생 전용 온보딩·적응 프로그램이 1~3월 해지율을 낮추는 핵심 레버.</div>
+    </div>
+  </div>
+</div><!-- /cohort -->
+
+<!-- ══════════════════ TAB: 해지 사유 분석 ══════════════════ -->
+<div class="tab-panel" id="tab-churnreason">
+  <div class="tab-source">📁 월별 중도해지 raw data (1월_중도해지_250203.xlsx ~ _RFHPM9N.xlsx)</div>
+  <div class="section-title"><div class="bar"></div>해지 사유 분석 · 교차 인사이트</div>
+  <div class="section-sub">중도해지 raw data × 학습 지표 교차 분석 · 실질해지 3,912건 기준 (졸업만료·중복결제 제외)</div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:var(--orange);--kpi-text:var(--orange)">
+      <div class="kpi-label"><span class="has-tip">1위 해지 사유<span class="tip-box">실질 해지 3,912건 중 가장 많은 해지 사유(소분류 기준).</span></span></div>
+      <div class="kpi-value" style="font-size:18px">학원 전환</div>
+      <div class="kpi-delta down">968건 · 24.7%</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--red);--kpi-text:var(--red)">
+      <div class="kpi-label"><span class="has-tip">학습관련 해지<span class="tip-box">미학습·학습시간부족·흥미저하·스스로안됨 등 학습 참여 문제로 인한 해지 비율.</span></span></div>
+      <div class="kpi-value">62.6<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta down">미학습21.8%·시간부족18.6%·흥미저하13.0%</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--yellow)">
+      <div class="kpi-label"><span class="has-tip">중1(7학년) 비중<span class="tip-box">실질 해지 중 7학년(중1) 학생이 차지하는 비율. 진입 시점이 가장 취약.</span></span></div>
+      <div class="kpi-value">46.8<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta warn">1,830건 · 전체의 절반</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--blue)">
+      <div class="kpi-label"><span class="has-tip">실이용 중앙값<span class="tip-box">해지 학생의 학습시작일~환불요청일 기준 실제 서비스 이용 기간 중앙값.</span></span></div>
+      <div class="kpi-value">211<span class="kpi-unit">일</span></div>
+      <div class="kpi-delta warn">42.4%(1,653건) 6개월 내 해지</div>
+    </div>
+    <div class="kpi" style="--kpi-color:var(--red)">
+      <div class="kpi-label"><span class="has-tip">12개월 내 해지<span class="tip-box">해지 학생 중 실이용 기간이 12개월 미만인 비율.</span></span></div>
+      <div class="kpi-value">80.0<span class="kpi-unit">%</span></div>
+      <div class="kpi-delta down">3,124건 · 10명 중 8명</div>
+    </div>
+  </div>
+
+  <!-- 차트 Row 1 -->
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">해지 사유 소분류 top5</div>
+      <div class="card-sub">실질해지 3,912건 기준 · 졸업만료·중복결제 제외</div>
+      <div class="chart-wrap"><canvas id="cr-reason-bar" height="220"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">학년별 해지 분포 (7~9학년)</div>
+      <div class="card-sub">실질해지 기준 · 중1이 46.8% 집중</div>
+      <div class="chart-wrap"><canvas id="cr-grade-donut" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 차트 Row 2 — 핵심 교차 -->
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">수행률 ↔ 학원 전환 비율 (r=0.823)</div>
+      <div class="card-sub">수행률 높은 달일수록 학원 전환 비율 높음 — 반직관적 발견</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>수행률(%)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--orange)"></div>학원 전환 비율(%)</div>
+      </div>
+      <div class="chart-wrap"><canvas id="cr-perf-hakwon" height="220"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">수행률 ↔ 미학습 해지 비율 (r=-0.623)</div>
+      <div class="card-sub">수행률 낮을수록 미학습 비율 상승 — 하락의 끝은 포기</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--blue)"></div>수행률(%)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div>미학습 해지 비율(%)</div>
+      </div>
+      <div class="chart-wrap"><canvas id="cr-perf-mihaksup" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 차트 Row 3 -->
+  <div class="chart-grid chart-grid-2">
+    <div class="card">
+      <div class="card-title">학년별 1위 해지 사유 비교</div>
+      <div class="card-sub">중1·중2는 학원 전환 1위 / 중3은 미학습 1위 — 완전 포기</div>
+      <div class="chart-wrap"><canvas id="cr-grade-reason" height="240"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">월별 실이용기간 중앙값 — 하반기 조기 포기</div>
+      <div class="card-sub">하반기 해지자(6~7개월) vs 상반기 해지자(7.5~8.7개월)</div>
+      <div class="chart-wrap"><canvas id="cr-duration" height="240"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 인사이트 -->
+  <div class="insight-grid">
+    <div class="insight" style="--i-color:var(--orange)">
+      <div class="insight-num">INSIGHT 27</div>
+      <div class="insight-title">수행률 높은 달에 학원 전환이 많다 r=0.823</div>
+      <div class="insight-body">1~2월(수행률 63~66%)에 학원 전환 <strong>31~34%</strong>. 6~7월(수행률 42~45%)엔 19~23%로 감소. 잘 하는 아이일수록 학원 전환 결심이 빠름. 수행률 개선이 리텐션으로 직결되지 않는 구조.</div>
+    </div>
+    <div class="insight" style="--i-color:var(--red)">
+      <div class="insight-num">INSIGHT 28</div>
+      <div class="insight-title">수행률 하락 → 미학습 고착 → 해지 r=-0.623</div>
+      <div class="insight-body">6~10월(수행률 42~50%) 미학습 해지 <strong>23~28%</strong>. 1~2월(수행률 63~66%) 미학습 17~18%. 학습량이 줄다가 "어차피 안 하는데"로 고착. 수행률 lag-2 예측 모델의 종착점.</div>
+    </div>
+    <div class="insight" style="--i-color:var(--yellow)">
+      <div class="insight-num">INSIGHT 29</div>
+      <div class="insight-title">3월 해지의 진짜 원인은 학원이 아니라 시간 부족</div>
+      <div class="insight-body">3월 시간 부족 <strong>22.1%로 연중 최고</strong>. 학원(29.8%)보다 핵심. 신학기 학교 적응·과목 부담으로 홈런 학습 시간 확보 불가. "학원에 빼앗긴 게 아니라 학교 일정에 밀린 것."</div>
+    </div>
+    <div class="insight" style="--i-color:var(--blue)">
+      <div class="insight-num">INSIGHT 30</div>
+      <div class="insight-title">하반기 해지자는 더 일찍 포기한 학생들</div>
+      <div class="insight-body">7~10월 해지 이용 중앙값 <strong>173~186일(6개월)</strong>. 1~3월 해지자는 227~261일(7.5~8.7개월). 방학(7~9월)을 계기로 4~5월에 이미 포기한 학생들이 공식 해지 처리되는 구조.</div>
+    </div>
+    <div class="insight" style="--i-color:var(--purple)">
+      <div class="insight-num">INSIGHT 31</div>
+      <div class="insight-title">9학년(중3)은 학원 전환이 아닌 완전 포기</div>
+      <div class="insight-body">7·8학년 1위: 학원(27%, 26%). 9학년 1위: <strong>미학습 32.4%</strong>. 내신 압박으로 자기주도 학습 자체가 무너짐. 설문 기대성과 1위 "자기주도습관(87%)"와 완전히 반대되는 실제 결과.</div>
+    </div>
+  </div>
+</div><!-- /churnreason -->
+
+<!-- ══════════════════ TAB: 핵심 인사이트 ══════════════════ -->
+<div class="tab-panel" id="tab-insight">
+  <div class="tab-source">📁 260409_CX팀_초중등_AI_데이터추출_raw_data_수정.xlsx · 중도해지 raw data · 학부모 인터뷰 · 선생님 인터뷰 4건</div>
+  <div class="section-title"><div class="bar"></div>핵심 인사이트 · 3각 교차 분석</div>
+  <div class="section-sub">CX 데이터 × 설문 × 인터뷰 교차 · 초등/중등 통합 시각</div>
+  <div class="insight-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="insight" style="--i-color:var(--red)"><div class="insight-num">INSIGHT 32</div><div class="insight-title">수행률 50.3%는 과대평가</div><div class="insight-body">1초컷, X버튼, 드래그 완료 등 가짜완료 포함. <strong>실제 학습률 더 낮음</strong> (황 선생님, 금 선생님)<br>→ 수행률 KPI 자체 재정의 필요</div></div>
+    <div class="insight" style="--i-color:var(--yellow)"><div class="insight-num">INSIGHT 33</div><div class="insight-title">AI 리포트: 선생님도 학부모도 안 봄</div><div class="insight-body">설문: 중3 학부모 40% "거의 안 함" / 정기확인 11.4%<br>인터뷰: 선생님 4명 전원 "똑같은 말만" → 미사용<br><strong>→ 내용 재설계 없이는 기능 무용</strong></div></div>
+    <div class="insight" style="--i-color:var(--red)"><div class="insight-num">INSIGHT 34</div><div class="insight-title">상담 역설 — 많이 할수록 해지 가속</div><div class="insight-body">"무관심 엄마가 오히려 해지 적음"<br>현황인지 → 불안 → 해지 유발 (이 선생님)<br><strong>→ 상담 언어 설계가 핵심 변수</strong></div></div>
+    <div class="insight" style="--i-color:var(--green)"><div class="insight-num">INSIGHT 35</div><div class="insight-title">학습량 "적당" ≠ 실제 가능</div><div class="insight-body">설문: 학습량 적당 2.95점<br>실제: 사회·과학 22개정 → 주2회 기준 9월에야 완료<br><strong>→ 커리큘럼 설계와 실제 인지 간 괴리</strong></div></div>
+  </div>
+  <div class="divider"></div>
+  <div class="card full">
+    <div class="card-title" style="margin-bottom:14px;">🎯 개선 우선순위 로드맵</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;border-top:2px solid var(--red);">
+        <div style="font-size:11px;font-weight:400;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-family:var(--font-en)">🚨 단기 (1~3개월)</div>
+        <div style="font-size:12px;color:var(--muted);line-height:2;">✦ 가짜완료 감지 로직 개발<br>✦ 상담 언어 가이드 재설계<br>✦ 1~3월 이탈 방어 온보딩 강화<br>✦ AI 리포트 내용 개선</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;border-top:2px solid var(--yellow);">
+        <div style="font-size:11px;font-weight:400;color:var(--yellow);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-family:var(--font-en)">⚡ 중기 (3~6개월)</div>
+        <div style="font-size:12px;color:var(--muted);line-height:2;">✦ 240분 달성 유도 프로그램<br>✦ 학습기 노후화 대응책<br>✦ 이탈 예측 알고리즘 설계<br>✦ 스터디카페 학습 지원</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;border-top:2px solid var(--green);">
+        <div style="font-size:11px;font-weight:400;color:var(--green);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-family:var(--font-en)">🎯 장기 (6개월+)</div>
+        <div style="font-size:12px;color:var(--muted);line-height:2;">✦ 22개정 커리큘럼 재조정<br>✦ 하루 5분 개념정리 복원<br>✦ 수행률 KPI 재정의<br>✦ 헤비유저 레퍼런스화</div>
+      </div>
+    </div>
+  </div>
+  <div class="insight-grid" style="margin-top:16px;">
+    <div class="insight" style="--i-color:var(--blue)"><div class="insight-num">INSIGHT 36</div><div class="insight-title">기대성과 1위: 자기주도습관</div><div class="insight-body"><strong>87%</strong>가 기대. 개념학습(75%), 내신향상(62%) 순. 헤비유저 스스로학습 4.0건이 유일한 부합 지표.</div></div>
+    <div class="insight" style="--i-color:var(--purple)"><div class="insight-num">INSIGHT 37</div><div class="insight-title">중등신규 심리압박 58.3%</div><div class="insight-body">시작 시점별 우선순위: <strong>중등신규 75%</strong>가 홈런 1순위. 기대치 높을수록 이탈도 빠름.</div></div>
+    <div class="insight" style="--i-color:var(--green)"><div class="insight-num">INSIGHT 38</div><div class="insight-title">해지 50%는 콘텐츠 문제</div><div class="insight-body">이 선생님: <strong>해지의 절반은 콘텐츠</strong>. 학습기 노후화·스터디카페 불가·22개정 미완성이 이탈 트리거.</div></div>
+  </div>
+</div>
+
+<!-- ═══════
+</div><!-- /content -->
+
+
+
+<script>
+// ═══════════════════════════════════════════════════════
+// 공통 데이터
+// ═══════════════════════════════════════════════════════
+const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const BANDS  = ['0–20%','20–40%','40–60%','60–80%','80–100%'];
+
+const elemData = {
+  perf: [71.3,73.0,73.7,73.7,73.1,74.2,71.1,68.5,70.5,68.5,68.4,66.3],
+  att:  [71.6,75.3,75.0,73.5,70.9,71.4,70.9,70.4,72.8,68.5,70.0,67.1],
+  time: [920.6,991.4,961.6,986.8,902.2,880.2,942.1,900.2,919.3,766.5,826.6,796.7],
+  self: [37.1,36.8,40.3,37.6,34.7,33.6,35.7,35.6,35.0,31.4,34.2,33.7],
+};
+const midData = {
+  perf: [67.2,64.8,57.2,50.1,47.9,44.0,46.0,46.8,45.9,46.8,46.2,41.2],
+  att:  [58.4,59.5,52.4,47.9,42.7,41.9,40.8,42.6,43.8,42.1,44.0,37.9],
+  time: [742.1,864.7,710.8,688.9,543.0,581.3,564.6,592.5,593.5,485.4,581.8,360.6],
+  self: [1.44,1.46,1.20,1.81,0.89,1.77,1.25,1.10,1.82,1.38,1.99,1.56],
+  students:[19850,20405,20276,19990,19641,18965,18017,17010,15999,14976,16029,18870]
+};
+const elemCross = {
+  count:[129586,44846,56453,84944,460614],
+  att:  [17.7,45.3,59.6,71.5,86.4],
+  time: [80,395.1,615.1,848.4,1225.4],
+  self: [13.9,17.2,22.5,27.9,43.1]
+};
+const midCross = {
+  count:[74761,15885,16147,19268,78689],
+  att:  [10.0,38.6,50.6,62.4,77.3],
+  time: [77.8,385.9,574.3,789.2,1136.0],
+  self: [1.04,1.4,1.44,1.6,1.84]
+};
+const churnRateData = [
+  {m:'1월', 완료:479,  회원:18403,수정회원:18882,해지율:2.60,수정해지율:2.54},
+  {m:'2월', 완료:449,  회원:18186,수정회원:18635,해지율:2.47,수정해지율:2.41},
+  {m:'3월', 완료:568,  회원:17039,수정회원:17607,해지율:3.33,수정해지율:3.23},
+  {m:'4월', 완료:454,  회원:15809,수정회원:16263,해지율:2.87,수정해지율:2.79},
+  {m:'5월', 완료:420,  회원:14720,수정회원:15140,해지율:2.85,수정해지율:2.77},
+  {m:'6월', 완료:336,  회원:13935,수정회원:14271,해지율:2.41,수정해지율:2.35},
+  {m:'7월', 완료:367,  회원:13146,수정회원:13513,해지율:2.79,수정해지율:2.72},
+  {m:'8월', 완료:352,  회원:12679,수정회원:13031,해지율:2.78,수정해지율:2.70},
+  {m:'9월', 완료:291,  회원:12426,수정회원:12717,해지율:2.34,수정해지율:2.29},
+  {m:'10월',완료:292,  회원:12601,수정회원:12893,해지율:2.32,수정해지율:2.26},
+  {m:'11월',완료:330,  회원:13566,수정회원:13896,해지율:2.43,수정해지율:2.37},
+  {m:'12월',완료:416,  회원:15851,수정회원:16267,해지율:2.62,수정해지율:2.56},
+];
+const 구간분석 = [
+  {구간:'0분(미학습)', 건수:49894,수행률:2.3, 중앙수행률:0.0, 출석률:2.4},
+  {구간:'1~60분',     건수:12360,수행률:20.6,중앙수행률:6.1, 출석률:24.7},
+  {구간:'60~120분',   건수:9866, 수행률:30.9,중앙수행률:19.0,출석률:30.0},
+  {구간:'120~240분',  건수:17057,수행률:43.7,중앙수행률:36.5,출석률:38.9},
+  {구간:'240~480분',  건수:28332,수행률:61.3,중앙수행률:64.4,출석률:52.7},
+  {구간:'480~960분',  건수:39242,수행률:76.6,중앙수행률:87.7,출석률:67.4},
+  {구간:'960분+',     건수:47999,수행률:88.0,중앙수행률:98.2,출석률:82.5},
+];
+const total구간 = 구간분석.reduce(function(s,d){return s+d.건수;},0);
+const monthly = [
+  {m:'1월', 총건:18352,미학습:1694,수행률:67.2,출석률:58.4,중앙시간:526,평균시간:742.1},
+  {m:'2월', 총건:18817,미학습:2237,수행률:64.8,출석률:59.5,중앙시간:623,평균시간:864.7},
+  {m:'3월', 총건:18792,미학습:3149,수행률:57.2,출석률:52.4,중앙시간:479,평균시간:710.8},
+  {m:'4월', 총건:18667,미학습:3958,수행률:50.1,출석률:47.9,중앙시간:423,평균시간:688.9},
+  {m:'5월', 총건:18419,미학습:5014,수행률:47.9,출석률:42.7,중앙시간:285,평균시간:543.0},
+  {m:'6월', 총건:18086,미학습:5174,수행률:44.0,출석률:41.9,중앙시간:293,평균시간:581.3},
+  {m:'7월', 총건:17394,미학습:5241,수행률:46.0,출석률:40.8,중앙시간:262,평균시간:564.6},
+  {m:'8월', 총건:16379,미학습:4851,수행률:46.8,출석률:42.6,중앙시간:297,평균시간:592.5},
+  {m:'9월', 총건:15131,미학습:4151,수행률:45.9,출석률:43.8,중앙시간:311,평균시간:593.5},
+  {m:'10월',총건:13499,미학습:3429,수행률:46.8,출석률:42.1,중앙시간:247,평균시간:485.4},
+  {m:'11월',총건:13020,미학습:3241,수행률:46.2,출석률:44.0,중앙시간:311,평균시간:581.8},
+  {m:'12월',총건:18194,미학습:7755,수행률:41.2,출석률:37.9,중앙시간:41, 평균시간:360.6},
+];
+const monthly_clean = [
+  {평균시간:618.3,중앙시간:489,수행률:65.9},{평균시간:739.8,중앙시간:583,수행률:63.5},
+  {평균시간:611.2,중앙시간:448,수행률:55.7},{평균시간:586.8,중앙시간:390,수행률:48.5},
+  {평균시간:440.3,중앙시간:251,수행률:45.9},{평균시간:452.7,중앙시간:251,수행률:41.7},
+  {평균시간:430.0,중앙시간:221,수행률:43.3},{평균시간:453.6,중앙시간:253,수행률:44.3},
+  {평균시간:471.1,중앙시간:272,수행률:43.6},{평균시간:372.1,중앙시간:212,수행률:44.5},
+  {평균시간:464.2,중앙시간:274,수행률:44.1},{평균시간:196.1,중앙시간:15, 수행률:36.5},
+];
+const hist = [
+  {x:0,y:69094},{x:100,y:14567},{x:200,y:13234},{x:300,y:11919},{x:400,y:10775},
+  {x:500,y:9607},{x:600,y:8890},{x:700,y:7980},{x:800,y:6879},{x:900,y:6170},
+  {x:1000,y:5549},{x:1100,y:4864},{x:1200,y:4204},{x:1300,y:3855},{x:1400,y:3267},
+  {x:1500,y:2859},{x:1600,y:2616},{x:1700,y:2221},{x:1800,y:1871},{x:1900,y:1678},{x:2000,y:1498},
+];
+
+// ═══════════════════════════════════════════════════════
+// Chart 공통 설정
+// ═══════════════════════════════════════════════════════
+Chart.register(ChartDataLabels);
+Chart.defaults.color = '#6b7280';
+// datalabels 전역 기본값: 꺼놓고 필요한 곳만 켜기
+Chart.defaults.set('plugins.datalabels', {display:false});
+Chart.defaults.font.family = "'Nanum Square AC', sans-serif";
+Chart.defaults.font.size = 12;
+const gridColor = 'rgba(255,255,255,0.05)';
+const ORANGE='#F04D22', BLUE='#4f8ef7', GREEN='#34d399', YELLOW='#fbbf24', RED='#f7594f', PURPLE='#a78bfa';
+
+function rgba(c,a){
+  var hx=c.replace('#','');
+  return 'rgba('+parseInt(hx.slice(0,2),16)+','+parseInt(hx.slice(2,4),16)+','+parseInt(hx.slice(4,6),16)+','+a+')';
+}
+function gradFill(ctx,color){
+  var g=ctx.createLinearGradient(0,0,0,220);
+  g.addColorStop(0,rgba(color,0.35));
+  g.addColorStop(1,rgba(color,0.0));
+  return g;
+}
+function deepClone(o){return JSON.parse(JSON.stringify(o));}
+
+function tooltipBase(){
+  return {backgroundColor:'#1e2230',borderColor:'rgba(255,255,255,0.08)',borderWidth:1,titleColor:'#e8eaf0',bodyColor:'#6b7280',padding:10};
+}
+function scalesBase(){
+  return {
+    x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+    y:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}}
+  };
+}
+
+// 단위 자동 판별
+function getUnit(label){
+  if(!label) return '';
+  if(label.indexOf('수행률')>=0||label.indexOf('출석률')>=0||label.indexOf('해지율')>=0||
+     label.indexOf('잔존율')>=0||label.indexOf('미학습률')>=0||label.indexOf('비율')>=0) return '%';
+  if(label.indexOf('학습시간')>=0||label.indexOf('중앙시간')>=0||label.indexOf('평균시간')>=0) return '분';
+  if(label.indexOf('학생수')>=0||label.indexOf('회원수')>=0||label.indexOf('유입')>=0) return '명';
+  if(label.indexOf('건수')>=0||label.indexOf('이탈')>=0||label.indexOf('완료')>=0) return '건';
+  if(label.indexOf('스스로학습')>=0) return '건';
+  return '';
+}
+function unitLabel(c){
+  var u=getUnit(c.dataset.label||'');
+  var v=c.raw;
+  if(v===null||v===undefined) return null;
+  var s=typeof v==='number'&&!Number.isInteger(v)?parseFloat(v.toFixed(1)).toLocaleString():Number(v).toLocaleString();
+  return ' '+(c.dataset.label||'')+': '+s+(u?u:'');
+}
+
+function lineChart(id,labels,datasets){
+  var el=document.getElementById(id); if(!el) return;
+  var ctx=el.getContext('2d');
+  var tt=tooltipBase(); tt.mode='index'; tt.intersect=false;
+  tt.callbacks={label:unitLabel};
+  new Chart(ctx,{type:'line',data:{labels:labels,datasets:datasets.map(function(d){
+    return {label:d.label,data:d.data,borderColor:d.color,
+      backgroundColor:d.fill?gradFill(ctx,d.color):'transparent',
+      fill:!!d.fill,tension:0.4,borderWidth:2,pointRadius:3,pointHoverRadius:6,
+      borderDash:d.dash||[],yAxisID:d.axis||'y'};
+  })},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:tt,datalabels:{display:false}},
+    scales:scalesBase()}});
+}
+function barChart(id,labels,datasets,extra){
+  var el=document.getElementById(id); if(!el) return;
+  var tt=tooltipBase(); tt.mode='index'; tt.intersect=false;
+  tt.callbacks={label:unitLabel};
+  var sc=scalesBase();
+  if(extra&&extra.stacked){sc.x.stacked=true;sc.y.stacked=true;}
+  new Chart(el,{type:'bar',data:{labels:labels,datasets:datasets.map(function(d){
+    return {label:d.label,data:d.data,backgroundColor:d.colors||d.color,borderRadius:5,borderSkipped:false,yAxisID:d.axis||'y'};
+  })},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:tt,
+      datalabels:{
+        display:true,
+        anchor:'center',align:'center',
+        color:'#ffffff',font:{size:10,weight:'700'},
+        formatter:function(v){
+          if(v===0||v===null||v===undefined) return '';
+          var n=typeof v==='number'&&!Number.isInteger(v)?parseFloat(v.toFixed(1)):v;
+          return n===0?'':n;
+        }
+      }
+    },
+    scales:sc}});
+}
+function radarChart(id,datasets,labels){
+  var el=document.getElementById(id); if(!el) return;
+  var tt=tooltipBase();
+  tt.callbacks={label:function(c){return c.dataset.label+': '+c.formattedValue;}};
+  new Chart(el,{type:'radar',data:{labels:labels,datasets:datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:10}},tooltip:tt},
+      scales:{r:{ticks:{backdropColor:'transparent',color:'#6b7280',font:{size:9}},
+        grid:{color:gridColor},pointLabels:{color:'#9ca3af',font:{size:10}},min:0,max:100}}}});
+}
+function doughnutChart(id,labels,data,colors,unit){
+  var el=document.getElementById(id); if(!el) return;
+  var tt=tooltipBase();
+  var total=data.reduce(function(s,v){return s+v;},0);
+  tt.callbacks={label:function(c){
+    var u=unit||'건';
+    return ' '+c.label+': '+c.raw.toLocaleString()+u+' ('+((c.raw/total)*100).toFixed(1)+'%)';
+  }};
+  new Chart(el,{type:'doughnut',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderColor:'#161920',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{
+        legend:{display:true,position:'right',labels:{color:'#6b7280',font:{size:10},padding:8,boxWidth:10}},
+        tooltip:tt,
+        datalabels:{
+          display:true,
+          color:'#fff',
+          font:{size:11,weight:'700'},
+          formatter:function(value,ctx){
+            var total=ctx.chart.data.datasets[0].data.reduce(function(a,b){return a+b;},0);
+            var pct=(value/total*100).toFixed(1);
+            return parseFloat(pct)>5?pct+'%':'';
+          }
+        }
+      }
+    }});
+}
+const bandColors=['#FF5A5A','#FFAA5A','#F5C842','#5BCC8A','#34d399'];
+
+// ═══════════════════════════════════════════════════════
+// 탭 전환
+// ═══════════════════════════════════════════════════════
+var built={};
+function showTab(id){
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  var panel=document.getElementById('tab-'+id);
+  if(panel) panel.classList.add('active');
+  if(event&&event.currentTarget) event.currentTarget.classList.add('active');
+  if(!built[id]){buildCharts(id);built[id]=true;}
+}
+function buildCharts(id){
+  if(id==='compare')    buildCompare();
+  if(id==='churn_rate') buildChurnRate();
+  if(id==='overview')   buildOverview();
+  if(id==='timecorr')   buildCorr();
+  if(id==='churn')      buildChurn();
+  if(id==='heavy')      buildHeavy();
+  if(id==='outlier')    buildOutlier();
+  if(id==='dist')       buildDist();
+  if(id==='churnreason') buildChurnReason();
+  if(id==='cohort')     buildCohort();
+  if(id==='elemdetail') buildElem();
+}
+
+// ═══════════════════════════════════════════════════════
+// buildCompare
+// ═══════════════════════════════════════════════════════
+function buildCompare(){
+  // 수행률 비교 라인
+  var ctx1=document.getElementById('cmp-perf'); if(!ctx1)return;
+  var c1=ctx1.getContext('2d');
+  var tt1=tooltipBase(); tt1.mode='index'; tt1.intersect=false;
+  tt1.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw.toFixed(1)+'%';}};
+  new Chart(c1,{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'초등',data:elemData.perf,borderColor:ORANGE,backgroundColor:gradFill(c1,ORANGE),fill:true,tension:0.4,borderWidth:2,pointRadius:3},
+    {label:'중등',data:midData.perf,borderColor:BLUE,backgroundColor:gradFill(c1,BLUE),fill:true,tension:0.4,borderWidth:2,pointRadius:3}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:10}},tooltip:tt1},
+    scales:scalesBase()}});
+
+  // 출석률+학습시간 복합
+  var ctx2=document.getElementById('cmp-att-time'); if(!ctx2)return;
+  var tt2=tooltipBase(); tt2.mode='index'; tt2.intersect=false;
+  tt2.callbacks={label:function(c){
+    var u=c.dataset.label.indexOf('학습시간')>=0?'(×10분)':'%';
+    return ' '+c.dataset.label+': '+c.raw.toFixed(1)+u;
+  }};
+  new Chart(ctx2,{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'초등 출석률',data:elemData.att,borderColor:ORANGE,backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:3},
+    {label:'중등 출석률',data:midData.att,borderColor:BLUE,backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:3},
+    {label:'초등 학습시간÷10',data:elemData.time.map(function(v){return v/10;}),borderColor:ORANGE,backgroundColor:'transparent',tension:0.4,borderWidth:1.5,borderDash:[4,3],pointRadius:2},
+    {label:'중등 학습시간÷10',data:midData.time.map(function(v){return v/10;}),borderColor:BLUE,backgroundColor:'transparent',tension:0.4,borderWidth:1.5,borderDash:[4,3],pointRadius:2}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:8,boxWidth:10}},tooltip:tt2},
+    scales:scalesBase()}});
+
+  // 구간 분포 바
+  var tt3=tooltipBase(); tt3.mode='index'; tt3.intersect=false;
+  tt3.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw+'%';}};
+  var sc3=scalesBase();
+  var el3=document.getElementById('cmp-dist'); if(!el3)return;
+  new Chart(el3,{type:'bar',data:{labels:BANDS,datasets:[
+    {label:'초등',data:elemCross.count.map(function(v){return (v/776443*100).toFixed(1);}),backgroundColor:rgba(ORANGE,0.8),borderRadius:5,borderSkipped:false},
+    {label:'중등',data:midCross.count.map(function(v){return (v/204750*100).toFixed(1);}),backgroundColor:rgba(BLUE,0.7),borderRadius:5,borderSkipped:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:10}},tooltip:tt3},
+    scales:sc3}});
+
+  // 레이더
+  radarChart('cmp-radar',[
+    {label:'초등',data:[71,71.5,88,59.3,70],fill:true,backgroundColor:rgba(ORANGE,0.15),borderColor:ORANGE,pointBackgroundColor:ORANGE,borderWidth:2},
+    {label:'중등',data:[50.3,46.2,67.7,38.4,4.1],fill:true,backgroundColor:rgba(BLUE,0.12),borderColor:BLUE,pointBackgroundColor:BLUE,borderWidth:2}
+  ],['수행률','출석률','학습시간(비율)','80%+ 비율','스스로학습']);
+
+  // 상관계수 바
+  function corrBar(id,vals,color){
+    var el=document.getElementById(id); if(!el)return;
+    var tt=tooltipBase();
+    tt.callbacks={label:function(c){return ' '+c.label+': r = '+c.raw.toFixed(3);}};
+    new Chart(el,{type:'bar',data:{
+      labels:['수행률↔출석률','수행률↔학습시간','수행률↔스스로학습','출석률↔학습시간'],
+      datasets:[{label:'상관계수',data:vals,backgroundColor:vals.map(function(v){return v>0.5?rgba(color,0.85):v>0.2?rgba(color,0.5):rgba(color,0.2);}),borderRadius:5}]
+    },options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:tt},
+      scales:{x:{ticks:{color:'#6b7280',font:{size:9}},grid:{color:gridColor}},y:{ticks:{color:'#6b7280'},grid:{color:gridColor},min:0,max:1}}}});
+  }
+  corrBar('cmp-corr-elem',[0.81,0.55,0.21,0.52],ORANGE);
+  corrBar('cmp-corr-mid', [0.813,0.597,0.034,0.651],BLUE);
+}
+
+// ═══════════════════════════════════════════════════════
+// buildChurnRate
+// ═══════════════════════════════════════════════════════
+function buildChurnRate(){
+  // 테이블
+  var tbody=document.getElementById('churnRateTable');
+  if(tbody){
+    var prev=null;
+    churnRateData.forEach(function(d){
+      var delta=prev!==null?((d.수정해지율-prev)).toFixed(2):null;
+      var deltaHtml=delta===null?'—':parseFloat(delta)>0?'<span style="color:var(--red)">▲'+delta+'%p</span>':'<span style="color:var(--green)">▼'+Math.abs(delta)+'%p</span>';
+      var isHigh=d.수정해지율>=3.0,isLow=d.수정해지율<=2.35;
+      var badge=isHigh?'<span class="badge badge-red">⚠ 고위험</span>':isLow?'<span class="badge badge-green">✓ 안정</span>':'<span class="badge badge-yellow">관찰</span>';
+      tbody.innerHTML+='<tr><td>'+d.m+'</td><td>'+d.완료.toLocaleString()+'</td><td>'+d.회원.toLocaleString()+'</td><td>'+d.수정회원.toLocaleString()+'</td><td>'+d.해지율.toFixed(2)+'%</td><td style="font-weight:700;color:'+(isHigh?'var(--red)':isLow?'var(--green)':'var(--yellow)')+'">'+d.수정해지율.toFixed(2)+'%</td><td>'+deltaHtml+'</td><td>'+badge+'</td></tr>';
+      prev=d.수정해지율;
+    });
+  }
+
+  // 해지율 추이 라인
+  var el1=document.getElementById('churnRateLine'); if(!el1)return;
+  var tt1=tooltipBase(); tt1.mode='index'; tt1.intersect=false;
+  tt1.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw.toFixed(2)+'%';}};
+  var sc1=scalesBase(); sc1.y.min=2.0; sc1.y.max=3.5;
+  sc1.y.ticks={color:'#6b7280',font:{size:10},callback:function(v){return v.toFixed(1)+'%';}};
+  new Chart(el1,{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'해지율(원본)',data:churnRateData.map(function(d){return d.해지율;}),borderColor:RED,backgroundColor:rgba(RED,0.1),fill:true,tension:0.4,borderWidth:2,pointRadius:4},
+    {label:'(수정)해지율',data:churnRateData.map(function(d){return d.수정해지율;}),borderColor:ORANGE,backgroundColor:'transparent',tension:0.4,borderWidth:2.5,pointRadius:4,borderDash:[4,3]}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt1},
+    scales:sc1}});
+
+  // 해지건수 + 회원수
+  var el2=document.getElementById('churnCountBar'); if(!el2)return;
+  var tt2=tooltipBase(); tt2.mode='index'; tt2.intersect=false;
+  tt2.callbacks={label:function(c){return c.dataset.yAxisID==='y2'?' 회원수: '+c.raw.toLocaleString()+'명':' 해지완료: '+c.raw+'건';}};
+  new Chart(el2,{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'해지완료 건수',data:churnRateData.map(function(d){return d.완료;}),backgroundColor:rgba(RED,0.75),yAxisID:'y',borderRadius:4,borderSkipped:false},
+    {label:'회원수',data:churnRateData.map(function(d){return d.회원;}),type:'line',borderColor:BLUE,backgroundColor:'transparent',yAxisID:'y2',tension:0.4,borderWidth:2,pointRadius:3,pointBackgroundColor:BLUE}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt2},
+    scales:{
+      x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+      y:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+      y2:{position:'right',ticks:{color:BLUE,font:{size:10}},grid:{display:false}}
+    }}});
+
+  // 분기별 도넛
+  var qtrRaw=[[0,1,2],[3,4,5],[6,7,8],[9,10,11]].map(function(idxs){
+    return idxs.reduce(function(s,i){return s+churnRateData[i].완료;},0);
+  });
+  doughnutChart('churnQtr',['1~3월 1~3월','4~6월 4~6월','7~9월 7~9월','10~12월 10~12월'],qtrRaw,
+    [rgba(RED,0.85),rgba(YELLOW,0.75),rgba(BLUE,0.65),rgba(GREEN,0.65)],'건');
+
+  // 해지율×학습지표 연동
+  var el4=document.getElementById('churnCorr'); if(!el4)return;
+  var tt4=tooltipBase(); tt4.mode='index'; tt4.intersect=false;
+  tt4.callbacks={label:function(c){
+    if(c.dataset.label.indexOf('해지율')>=0) return ' '+c.dataset.label+': '+c.raw.toFixed(2);
+    return ' '+c.dataset.label+': '+c.raw.toFixed(1)+'%';
+  }};
+  new Chart(el4,{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'(수정)해지율×10',data:churnRateData.map(function(d){return d.수정해지율*10;}),borderColor:RED,backgroundColor:rgba(RED,0.1),fill:true,tension:0.4,borderWidth:2,pointRadius:3},
+    {label:'수행률',data:midData.perf,borderColor:BLUE,backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:3},
+    {label:'출석률',data:midData.att,borderColor:YELLOW,backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:3}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt4},
+    scales:scalesBase()}});
+
+  // Lag-2 차트
+  var el5=document.getElementById('lagChart'); if(!el5)return;
+  var tt5=tooltipBase(); tt5.mode='index'; tt5.intersect=false;
+  tt5.callbacks={label:function(c){
+    return c.dataset.yAxisID==='y2'?' (수정)해지율: '+c.raw.toFixed(2)+'%':' 수행률: '+c.raw.toFixed(1)+'%';
+  }};
+  var sc5=scalesBase();
+  sc5.y.min=40; sc5.y.max=70;
+  sc5.y.ticks={color:BLUE,font:{size:10},callback:function(v){return v+'%';}};
+  sc5.y2={position:'right',ticks:{color:RED,font:{size:10},callback:function(v){return v.toFixed(1)+'%';}},grid:{display:false},min:2.0,max:3.5};
+  new Chart(el5,{type:'line',data:{labels:MONTHS.slice(2),datasets:[
+    {label:'수행률 (2개월 전)',data:midData.perf.slice(0,10),borderColor:BLUE,backgroundColor:rgba(BLUE,0.1),fill:true,tension:0.4,borderWidth:2,pointRadius:4,yAxisID:'y'},
+    {label:'(수정)해지율',data:churnRateData.slice(2).map(function(d){return d.수정해지율;}),borderColor:RED,backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:4,yAxisID:'y2'}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt5},
+    scales:sc5}});
+
+  // 잔존율+신규유입
+  var el6=document.getElementById('retentionChart'); if(!el6)return;
+  var tt6=tooltipBase(); tt6.mode='index'; tt6.intersect=false;
+  tt6.callbacks={label:function(c){
+    return c.dataset.yAxisID==='y2'?' 신규유입: '+c.raw.toLocaleString()+'명':' 잔존율: '+c.raw.toFixed(1)+'%';
+  }};
+  var sc6=scalesBase();
+  sc6.y.min=60; sc6.y.max=105;
+  sc6.y.ticks={color:BLUE,font:{size:10},callback:function(v){return v+'%';}};
+  sc6.y2={position:'right',ticks:{color:GREEN,font:{size:10}},grid:{display:false}};
+  var retention=[100.0,98.8,92.6,85.9,80.0,75.7,71.4,68.9,67.5,68.5,86.1,86.1];
+  new Chart(el6,{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'신규유입(건)',data:[0,232,0,0,0,0,0,0,38,467,3666,416],backgroundColor:rgba(GREEN,0.6),yAxisID:'y2',borderRadius:3,borderSkipped:false},
+    {label:'잔존율(%)',data:retention,type:'line',borderColor:BLUE,backgroundColor:rgba(BLUE,0.1),fill:true,yAxisID:'y',tension:0.4,borderWidth:2,pointRadius:4,
+      pointBackgroundColor:retention.map(function(v){return v<75?RED:v>85?GREEN:YELLOW;})}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt6},
+    scales:sc6}});
+}
+
+// ═══════════════════════════════════════════════════════
+// buildOverview
+// ═══════════════════════════════════════════════════════
+function buildOverview(){
+  radarChart('overviewRadar',[
+    {label:'초등',data:[71,71.5,100,100],fill:true,backgroundColor:rgba(GREEN,0.15),borderColor:GREEN,pointBackgroundColor:GREEN,borderWidth:2},
+    {label:'중등',data:[50.3,46.2,67.7,4.1],fill:true,backgroundColor:rgba(RED,0.12),borderColor:RED,pointBackgroundColor:RED,borderWidth:2}
+  ],['수행률','출석률','학습시간(비율)','스스로학습']);
+
+  var el=document.getElementById('overviewMonthly'); if(!el)return;
+  var tt=tooltipBase(); tt.mode='index'; tt.intersect=false;
+  tt.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw.toFixed(1)+'%';}};
+  var ctx=el.getContext('2d');
+  new Chart(ctx,{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'수행률',data:midData.perf,borderColor:BLUE,backgroundColor:gradFill(ctx,BLUE),fill:true,tension:0.4,borderWidth:2,pointRadius:3},
+    {label:'출석률',data:midData.att,borderColor:GREEN,backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:3}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:10}},tooltip:tt},
+    scales:scalesBase()}});
+}
+
+// ═══════════════════════════════════════════════════════
+// buildCorr
+// ═══════════════════════════════════════════════════════
+function buildCorr(){
+  var tbody=document.getElementById('corrTable');
+  if(tbody){
+    구간분석.forEach(function(d){
+      tbody.innerHTML+='<tr><td>'+d.구간+'</td><td>'+d.건수.toLocaleString()+'</td><td>'+(d.건수/total구간*100).toFixed(1)+'%</td><td><b>'+d.수행률+'%</b></td><td>'+d.중앙수행률+'%</td><td>'+d.출석률+'%</td></tr>';
+    });
+  }
+  var el1=document.getElementById('corrBar'); if(!el1)return;
+  var tt1=tooltipBase(); tt1.mode='index'; tt1.intersect=false;
+  tt1.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw+'%';}};
+  var sc1=scalesBase(); sc1.y.max=100;
+  new Chart(el1,{type:'bar',data:{labels:구간분석.map(function(d){return d.구간;}),datasets:[
+    {label:'평균 수행률',data:구간분석.map(function(d){return d.수행률;}),backgroundColor:rgba(BLUE,0.8),borderRadius:5,borderSkipped:false},
+    {label:'평균 출석률',data:구간분석.map(function(d){return d.출석률;}),backgroundColor:rgba(GREEN,0.6),borderRadius:5,borderSkipped:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:10}},tooltip:tt1},
+    scales:sc1}});
+
+  doughnutChart('corrDoughnut',구간분석.map(function(d){return d.구간;}),구간분석.map(function(d){return d.건수;}),
+    [rgba(RED,0.85),rgba(YELLOW,0.6),rgba(YELLOW,0.4),rgba(BLUE,0.4),rgba(BLUE,0.6),rgba(GREEN,0.6),rgba(GREEN,0.85)],'건');
+
+  // 월별 미학습 스택바 (수행률 0% + 60분 미만)
+  var perfZero=[11.0,13.9,19.1,25.9,29.2,33.8,32.5,31.7,31.0,28.0,29.3,41.0];
+  var low60   =[5.9,4.4,5.2,5.3,6.0,5.7,5.5,5.1,5.7,7.6,6.5,9.9];
+  var totalInactive=[16.9,18.3,24.3,31.2,35.2,39.5,38.0,36.8,36.7,35.6,35.8,50.9];
+  var elI=document.getElementById('inactiveStack'); if(!elI)return;
+  var ttI=tooltipBase(); ttI.mode='index'; ttI.intersect=false;
+  ttI.callbacks={
+    label:function(c){
+      var labels=['수행률 0%','60분 미만'];
+      return ' '+labels[c.datasetIndex]+': '+c.raw.toFixed(1)+'%';
+    },
+    footer:function(items){return '합계: '+totalInactive[items[0].dataIndex].toFixed(1)+'%';}
+  };
+  new Chart(elI,{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'수행률 0%',data:perfZero,backgroundColor:rgba(RED,0.85),stack:'s',borderRadius:0,borderSkipped:false,
+      datalabels:{display:false}},
+    {label:'60분 미만',data:low60,backgroundColor:rgba(BLUE,0.75),stack:'s',borderRadius:3,borderSkipped:'bottom',
+      datalabels:{display:true,anchor:'end',align:'top',color:'#9ca3af',font:{size:10,weight:'700'},
+        formatter:function(v,ctx2){return totalInactive[ctx2.dataIndex].toFixed(1)+'%';}}}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:ttI,datalabels:{display:false}},
+    scales:{
+      x:{stacked:true,ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+      y:{stacked:true,min:0,max:60,ticks:{color:'#6b7280',font:{size:10},callback:function(v){return v+'%';}},grid:{color:gridColor}}
+    }}});
+}
+
+// ═══════════════════════════════════════════════════════
+// buildChurn
+// ═══════════════════════════════════════════════════════
+function buildChurn(){
+  var perfZero=[11.0,13.9,19.1,25.9,29.2,33.8,32.5,31.7,31.0,28.0,29.3,41.0];
+  var low60   =[5.9,4.4,5.2,5.3,6.0,5.7,5.5,5.1,5.7,7.6,6.5,9.9];
+  var total   =[16.9,18.3,24.3,31.2,35.2,39.5,38.0,36.8,36.7,35.6,35.8,50.9];
+  var perfZeroN=[2020,2616,3594,4836,5380,6117,5650,5192,4691,3781,3816,7460];
+  var lowN    =[1081,834,986,981,1114,1026,964,843,860,1022,852,1797];
+  var totalN  =[3101,3450,4580,5817,6494,7143,6614,6035,5551,4803,4668,9257];
+
+  // 테이블
+  var tbody=document.getElementById('churnTable');
+  if(tbody){
+    monthly.forEach(function(d,i){
+      var tot=totalN[i]; var totP=total[i]; var warn=totP>=35;
+      tbody.innerHTML+='<tr>'
+        +'<td>'+d.m+'</td>'
+        +'<td>'+d.총건.toLocaleString()+'</td>'
+        +'<td>'+perfZeroN[i].toLocaleString()+'<span style="color:var(--muted);font-size:11px;"> ('+perfZero[i]+'%)</span></td>'
+        +'<td>'+lowN[i].toLocaleString()+'<span style="color:var(--muted);font-size:11px;"> ('+low60[i]+'%)</span></td>'
+        +'<td><span class="badge '+(warn?'badge-red':'badge-yellow')+'">'+totP+'%</span> '+tot.toLocaleString()+'건</td>'
+        +'<td>'+d.수행률+'%</td>'
+        +'<td>'+d.중앙시간+'분</td>'
+        +'</tr>';
+    });
+  }
+
+  // 완전이탈 콤보
+  var churnMonthly=[115,204,259,327,414,782,1077,1309,1702,550,412,0];
+  var activeStudents=[18352,18817,18792,18667,18419,18086,17394,16379,15131,13497,13016,12823];
+  var el2=document.getElementById('churnCombo'); if(!el2)return;
+  var tt2=tooltipBase(); tt2.mode='index'; tt2.intersect=false;
+  tt2.callbacks={label:function(c){return c.dataset.yAxisID==='y2'?' 활성 학생: '+c.raw.toLocaleString()+'명':' 완전이탈: '+c.raw+'건';}};
+  new Chart(el2,{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'완전이탈 건수',data:churnMonthly,backgroundColor:rgba(RED,0.7),yAxisID:'y',borderRadius:4,borderSkipped:false},
+    {label:'활성 학생 수',data:activeStudents,type:'line',borderColor:BLUE,backgroundColor:'transparent',yAxisID:'y2',tension:0.4,borderWidth:2,pointRadius:3,pointBackgroundColor:BLUE}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt2},
+    scales:{
+      x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+      y:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+      y2:{position:'right',ticks:{color:BLUE,font:{size:10}},grid:{display:false}}
+    }}});
+}
+
+// ═══════════════════════════════════════════════════════
+// buildHeavy
+// ═══════════════════════════════════════════════════════
+function buildHeavy(){
+  radarChart('heavyRadar',[
+    {label:'헤비유저',data:[85.8,82.8,100,100],fill:true,backgroundColor:rgba(BLUE,0.2),borderColor:BLUE,pointBackgroundColor:BLUE,borderWidth:2},
+    {label:'일반유저',data:[46.1,41.6,22.7,27.5],fill:true,backgroundColor:rgba(RED,0.1),borderColor:RED,pointBackgroundColor:RED,borderWidth:2}
+  ],['수행률','출석률','학습시간(상대)','스스로학습(상대)']);
+
+  var el=document.getElementById('heavyBar'); if(!el)return;
+  var tt=tooltipBase(); tt.mode='index'; tt.intersect=false;
+  new Chart(el,{type:'bar',data:{labels:['수행률(%)','출석률(%)','학습시간(÷20)','스스로학습(×10)'],datasets:[
+    {label:'헤비유저',data:[85.8,82.8,96.7,40.0],backgroundColor:rgba(BLUE,0.85),borderRadius:5,borderSkipped:false},
+    {label:'전체 평균',data:[50.3,46.2,30.7,14.7],backgroundColor:rgba(PURPLE,0.6),borderRadius:5,borderSkipped:false},
+    {label:'일반유저',data:[46.1,41.6,22.0,11.0],backgroundColor:rgba(RED,0.6),borderRadius:5,borderSkipped:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:10}},tooltip:tt},
+    scales:scalesBase()}});
+}
+
+// ═══════════════════════════════════════════════════════
+// buildOutlier
+// ═══════════════════════════════════════════════════════
+function buildOutlier(){
+  var el1=document.getElementById('outlierLine'); if(!el1)return;
+  var tt1=tooltipBase(); tt1.mode='index'; tt1.intersect=false;
+  tt1.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw.toFixed(0)+'분';}};
+  var sc1=scalesBase(); sc1.y.min=150; sc1.y.max=900;
+  var ctx1=el1.getContext('2d');
+  new Chart(ctx1,{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'원본 평균 학습시간',data:monthly.map(function(d){return d.평균시간;}),borderColor:RED,backgroundColor:'transparent',tension:0.4,borderWidth:2,borderDash:[4,3],pointRadius:3},
+    {label:'이상치 제거 후 평균',data:monthly_clean.map(function(d){return d.평균시간;}),borderColor:BLUE,backgroundColor:gradFill(ctx1,BLUE),fill:true,tension:0.4,borderWidth:2,pointRadius:3},
+    {label:'중앙값(이상치 제거)',data:monthly_clean.map(function(d){return d.중앙시간;}),borderColor:GREEN,backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:3}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:10}},tooltip:tt1},
+    scales:sc1}});
+
+  var el2=document.getElementById('outlierPerf'); if(!el2)return;
+  var tt2=tooltipBase(); tt2.mode='index'; tt2.intersect=false;
+  tt2.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw.toFixed(1)+'%';}};
+  new Chart(el2,{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'원본 수행률',data:monthly.map(function(d){return d.수행률;}),backgroundColor:rgba(RED,0.5),borderRadius:4,borderSkipped:false},
+    {label:'이상치 제거 수행률',data:monthly_clean.map(function(d){return d.수행률;}),backgroundColor:rgba(BLUE,0.75),borderRadius:4,borderSkipped:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:10}},tooltip:tt2},
+    scales:scalesBase()}});
+
+  var el3=document.getElementById('outlierMedian'); if(!el3)return;
+  var tt3=tooltipBase();
+  tt3.callbacks={label:function(c){return ' 중앙 학습시간: '+c.raw+'분';}};
+  var ctx3=el3.getContext('2d');
+  new Chart(ctx3,{type:'line',data:{labels:MONTHS,datasets:[{
+    label:'이상치 제거 후 중앙 학습시간',
+    data:monthly_clean.map(function(d){return d.중앙시간;}),
+    borderColor:GREEN,backgroundColor:gradFill(ctx3,GREEN),fill:true,tension:0.4,borderWidth:2,pointRadius:3
+  }]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:tt3},
+    scales:scalesBase()}});
+}
+
+// ═══════════════════════════════════════════════════════
+// buildDist
+// ═══════════════════════════════════════════════════════
+function buildDist(){
+  var el1=document.getElementById('distHist'); if(!el1)return;
+  var tt1=tooltipBase();
+  tt1.callbacks={label:function(c){return ' 건수: '+c.raw.toLocaleString()+'건';}};
+  new Chart(el1,{type:'bar',data:{labels:hist.map(function(d){return d.x+'분';}),datasets:[{
+    label:'건수',data:hist.map(function(d){return d.y;}),
+    backgroundColor:hist.map(function(d,i){return i===0?rgba(RED,0.85):rgba(BLUE,0.5+(i/hist.length)*0.35);}),
+    borderRadius:3,borderSkipped:false
+  }]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:tt1},
+    scales:{x:{ticks:{color:'#6b7280',font:{size:9}},grid:{display:false}},
+      y:{ticks:{color:'#6b7280',font:{size:10},callback:function(v){return (v/1000)+'k';}},grid:{color:gridColor}}}}});
+
+  doughnutChart('distPie',구간분석.map(function(d){return d.구간;}),구간분석.map(function(d){return d.건수;}),
+    [rgba(RED,0.85),rgba(YELLOW,0.6),rgba(YELLOW,0.45),rgba(BLUE,0.4),rgba(BLUE,0.6),rgba(GREEN,0.6),rgba(GREEN,0.85)],'건');
+
+  var el3=document.getElementById('distPerf'); if(!el3)return;
+  var tt3=tooltipBase(); tt3.mode='index'; tt3.intersect=false;
+  tt3.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw+'%';}};
+  var ctx3=el3.getContext('2d');
+  new Chart(ctx3,{type:'line',data:{labels:구간분석.map(function(d){return d.구간;}),datasets:[
+    {label:'평균 수행률',data:구간분석.map(function(d){return d.수행률;}),borderColor:BLUE,backgroundColor:gradFill(ctx3,BLUE),fill:true,tension:0.4,pointRadius:5},
+    {label:'중앙 수행률',data:구간분석.map(function(d){return d.중앙수행률;}),borderColor:GREEN,backgroundColor:'transparent',tension:0.4,borderDash:[4,3],pointRadius:4}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:10}},tooltip:tt3},
+    scales:scalesBase()}});
+}
+
+// ═══════════════════════════════════════════════════════
+// buildChurnReason
+// ═══════════════════════════════════════════════════════
+function buildChurnReason(){
+  // 확정 수치 — raw data 중복제거 후 실질해지 3,912건 기준
+  const 수행률  = [67.2,64.8,57.2,50.1,47.9,44.0,46.0,46.8,45.9,46.8,46.2,41.2];
+  const 학원pct  = [30.8,34.5,29.8,21.7,19.1,22.8,22.8,23.9,20.1,18.9,27.7,24.5];
+  const 미학습pct = [17.5,16.6,13.9,20.7,22.2,24.4,23.1,27.1,28.0,26.9,20.1,25.9];
+  const 시간부족pct=[14.2,12.3,22.1,26.0,20.9,15.9,18.6,15.7,19.7,18.9,19.7,16.5];
+  const 이용중앙 = [227,241,261,226,208,197,184,180,173,186,212,230];
+
+  // ① 소분류 top5 가로 바
+  var e1=document.getElementById('cr-reason-bar'); if(!e1)return;
+  var tt1=tooltipBase();
+  tt1.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw.toLocaleString()+'건 ('+((c.raw/3912)*100).toFixed(1)+'%)';}};
+  new Chart(e1,{type:'bar',
+    data:{
+      labels:['학원','미학습','학습 시간 부족','학습 흥미저하','스스로 학습 안됨'],
+      datasets:[{label:'해지 건수',data:[968,854,729,509,188],
+        backgroundColor:[rgba(ORANGE,0.85),rgba(RED,0.8),rgba(YELLOW,0.8),rgba(PURPLE,0.7),rgba(BLUE,0.6)],
+        borderRadius:5,borderSkipped:false}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:tt1},
+      scales:{
+        x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+        y:{ticks:{color:'#6b7280',font:{size:11}},grid:{display:false}}
+      }
+    }
+  });
+
+  // ② 학년별 도넛 (7~9학년)
+  doughnutChart('cr-grade-donut',
+    ['7학년 (중1)','8학년 (중2)','9학년 (중3)'],
+    [1830,1300,649],
+    [rgba(ORANGE,0.85),rgba(BLUE,0.75),rgba(PURPLE,0.7)],'건');
+
+  // ③ 수행률 ↔ 학원 전환 듀얼축
+  var e3=document.getElementById('cr-perf-hakwon'); if(!e3)return;
+  var tt3=tooltipBase(); tt3.mode='index'; tt3.intersect=false;
+  tt3.callbacks={label:function(c){return c.dataset.yAxisID==='y2'?' 학원 전환: '+c.raw+'%':' 수행률: '+c.raw+'%';}};
+  var ctx3=e3.getContext('2d');
+  new Chart(ctx3,{type:'line',
+    data:{labels:MONTHS,datasets:[
+      {label:'수행률',data:수행률,borderColor:BLUE,backgroundColor:gradFill(ctx3,BLUE),fill:true,tension:0.4,borderWidth:2,pointRadius:3,yAxisID:'y'},
+      {label:'학원 전환 비율',data:학원pct,borderColor:ORANGE,backgroundColor:'transparent',tension:0.4,borderWidth:2.5,pointRadius:4,borderDash:[5,3],yAxisID:'y2'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt3},
+      scales:{
+        x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+        y:{min:35,max:75,ticks:{color:BLUE,font:{size:10},callback:function(v){return v+'%';}},grid:{color:gridColor}},
+        y2:{position:'right',min:10,max:45,ticks:{color:ORANGE,font:{size:10},callback:function(v){return v+'%';}},grid:{display:false}}
+      }
+    }
+  });
+
+  // ④ 수행률 ↔ 미학습 비율 듀얼축
+  var e4=document.getElementById('cr-perf-mihaksup'); if(!e4)return;
+  var tt4=tooltipBase(); tt4.mode='index'; tt4.intersect=false;
+  tt4.callbacks={label:function(c){return c.dataset.yAxisID==='y2'?' 미학습 해지: '+c.raw+'%':' 수행률: '+c.raw+'%';}};
+  var ctx4=e4.getContext('2d');
+  new Chart(ctx4,{type:'line',
+    data:{labels:MONTHS,datasets:[
+      {label:'수행률',data:수행률,borderColor:BLUE,backgroundColor:gradFill(ctx4,BLUE),fill:true,tension:0.4,borderWidth:2,pointRadius:3,yAxisID:'y'},
+      {label:'미학습 해지 비율',data:미학습pct,borderColor:RED,backgroundColor:'transparent',tension:0.4,borderWidth:2.5,pointRadius:4,borderDash:[5,3],yAxisID:'y2'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt4},
+      scales:{
+        x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+        y:{min:35,max:75,ticks:{color:BLUE,font:{size:10},callback:function(v){return v+'%';}},grid:{color:gridColor}},
+        y2:{position:'right',min:8,max:36,ticks:{color:RED,font:{size:10},callback:function(v){return v+'%';}},grid:{display:false}}
+      }
+    }
+  });
+
+  // ⑤ 학년별 사유 비교 바
+  // 7학년: 학원26.7/미학습17.5/시간부족21.3/흥미저하13.2
+  // 8학년: 학원26.3/미학습23.8/시간부족15.7/흥미저하14.5
+  // 9학년: 학원18.6/미학습32.4/시간부족18.0/흥미저하9.9
+  var e5=document.getElementById('cr-grade-reason'); if(!e5)return;
+  var tt5=tooltipBase(); tt5.mode='index'; tt5.intersect=false;
+  tt5.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw+'%';}};
+  new Chart(e5,{type:'bar',
+    data:{
+      labels:['7학년 (중1)','8학년 (중2)','9학년 (중3)'],
+      datasets:[
+        {label:'학원',         data:[26.7,26.3,18.6],backgroundColor:rgba(ORANGE,0.85),borderRadius:4,borderSkipped:false},
+        {label:'미학습',       data:[17.5,23.8,32.4],backgroundColor:rgba(RED,0.8),    borderRadius:4,borderSkipped:false},
+        {label:'학습 시간 부족',data:[21.3,15.7,18.0],backgroundColor:rgba(YELLOW,0.8),borderRadius:4,borderSkipped:false},
+        {label:'학습 흥미저하', data:[13.2,14.5, 9.9],backgroundColor:rgba(PURPLE,0.7),borderRadius:4,borderSkipped:false}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt5},
+      scales:{
+        x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+        y:{min:0,max:40,ticks:{color:'#6b7280',font:{size:10},callback:function(v){return v+'%';}},grid:{color:gridColor}}
+      }
+    }
+  });
+
+  // ⑥ 월별 이용 중앙값 라인
+  var e6=document.getElementById('cr-duration'); if(!e6)return;
+  var tt6=tooltipBase();
+  tt6.callbacks={label:function(c){return ' 이용 중앙값: '+c.raw+'일 ('+Math.round(c.raw/30*10)/10+'개월)';}};
+  var ctx6=e6.getContext('2d');
+  new Chart(ctx6,{type:'line',
+    data:{labels:MONTHS,datasets:[{
+      label:'이용기간 중앙값',data:이용중앙,
+      borderColor:GREEN,backgroundColor:gradFill(ctx6,GREEN),fill:true,tension:0.4,borderWidth:2.5,pointRadius:5,
+      pointBackgroundColor:이용중앙.map(function(v){return v<190?RED:v>240?GREEN:YELLOW;})
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:tt6},
+      scales:{
+        x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+        y:{min:150,max:280,ticks:{color:'#6b7280',font:{size:10},callback:function(v){return v+'일';}},grid:{color:gridColor}}
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// buildCohort
+// ═══════════════════════════════════════════════════════
+function buildCohort(){
+  var cohortData=[
+    {m:'1월', 전체:67.2,코호트:67.2,잔존율:100.0,전환생:null},
+    {m:'2월', 전체:64.8,코호트:64.6,잔존율:102.5,전환생:null},
+    {m:'3월', 전체:57.2,코호트:56.8,잔존율:102.4,전환생:null},
+    {m:'4월', 전체:50.1,코호트:49.5,잔존율:101.7,전환생:null},
+    {m:'5월', 전체:47.9,코호트:47.2,잔존율:100.4,전환생:null},
+    {m:'6월', 전체:44.0,코호트:43.4,잔존율:98.6, 전환생:null},
+    {m:'7월', 전체:46.0,코호트:45.5,잔존율:94.8, 전환생:null},
+    {m:'8월', 전체:46.8,코호트:46.1,잔존율:89.2, 전환생:76.2},
+    {m:'9월', 전체:45.9,코호트:44.2,잔존율:82.4, 전환생:72.3},
+    {m:'10월',전체:46.8,코호트:44.9,잔존율:73.5, 전환생:81.3},
+    {m:'11월',전체:46.2,코호트:43.8,잔존율:70.9, 전환생:81.8},
+    {m:'12월',전체:41.2,코호트:39.5,잔존율:69.9, 전환생:81.4},
+  ];
+  var churnCompare=[
+    {m:'2월', 이탈:206,  잔류:19644,이탈p:10.8,잔류p:66.8,시간:83, zero:69.4},
+    {m:'3월', 이탈:366,  잔류:20039,이탈p:4.0, 잔류p:64.0,시간:57, zero:82.8},
+    {m:'4월', 이탈:420,  잔류:19856,이탈p:5.9, 잔류p:55.8,시간:72, zero:83.3},
+    {m:'5월', 이탈:492,  잔류:19498,이탈p:5.4, 잔류p:49.1,시간:56, zero:83.9},
+    {m:'6월', 이탈:788,  잔류:18853,이탈p:4.5, 잔류p:47.6,시간:52, zero:89.0},
+    {m:'7월', 이탈:1158, 잔류:17807,이탈p:2.5, 잔류p:45.3,시간:23, zero:92.5},
+    {m:'8월', 이탈:1344, 잔류:16673,이탈p:1.2, 잔류p:48.8,시간:11, zero:95.8},
+    {m:'9월', 이탈:1479, 잔류:15531,이탈p:0.9, 잔류p:51.4,시간:10, zero:96.8},
+    {m:'10월',이탈:1872, 잔류:14127,이탈p:1.3, 잔류p:53.1,시간:15, zero:96.5},
+    {m:'11월',이탈:585,  잔류:14391,이탈p:3.1, 잔류p:51.8,시간:45, zero:90.6},
+    {m:'12월',이탈:505,  잔류:15524,이탈p:9.1, 잔류p:53.9,시간:108,zero:75.4},
+  ];
+  var newComp={
+    전환:[0,582,68,23,20,23,30,251,381,776,1565,3258],
+    순수:[0,179,142,101,95,73,96,55,63,51,48,47],
+  };
+
+  // 테이블
+  var tbody=document.getElementById('cohortTable');
+  if(tbody){
+    churnCompare.forEach(function(d){
+      var gap=(d.잔류p-d.이탈p).toFixed(1);
+      tbody.innerHTML+='<tr><td>'+d.m+'</td><td>'+d.이탈.toLocaleString()+'명</td><td>'+d.잔류.toLocaleString()+'명</td><td style="color:var(--red);font-weight:700">'+d.이탈p+'%</td><td>'+d.시간+'분</td><td><span class="badge '+(d.zero>=90?'badge-red':'badge-yellow')+'">'+d.zero+'%</span></td><td>'+d.잔류p+'%</td><td style="color:var(--green);font-weight:700">+'+gap+'%p</td></tr>';
+    });
+  }
+
+  // 코호트 추이 라인
+  var el1=document.getElementById('cohortLine'); if(!el1)return;
+  var tt1=tooltipBase(); tt1.mode='index'; tt1.intersect=false;
+  tt1.callbacks={label:function(c){
+    return c.dataset.yAxisID==='y2'?' 잔존율: '+c.raw+'%':' '+c.dataset.label+': '+c.raw+'%';
+  }};
+  var sc1=scalesBase(); sc1.y.min=35; sc1.y.max=75;
+  sc1.y.ticks={color:'#6b7280',font:{size:10},callback:function(v){return v+'%';}};
+  sc1.y2={position:'right',ticks:{color:RED,font:{size:10},callback:function(v){return v+'%';}},grid:{display:false},min:50,max:105};
+  var ctx1=el1.getContext('2d');
+  new Chart(ctx1,{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'전체 평균 (신규 포함)',data:cohortData.map(function(d){return d.전체;}),
+      borderColor:BLUE,backgroundColor:gradFill(ctx1,BLUE),fill:true,tension:0.4,borderWidth:2,pointRadius:3,yAxisID:'y'},
+    {label:'1월 회원 (기존만)',data:cohortData.map(function(d){return d.코호트;}),
+      borderColor:ORANGE,backgroundColor:'transparent',tension:0.4,borderWidth:2.5,pointRadius:4,borderDash:[5,3],yAxisID:'y'},
+    {label:'1월 회원 잔존율',data:cohortData.map(function(d){return d.잔존율;}),
+      borderColor:RED,backgroundColor:rgba(RED,0.06),fill:true,tension:0.4,borderWidth:1.5,pointRadius:3,yAxisID:'y2'}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt1},
+    scales:sc1}});
+
+  // 신규 유입 구성 스택 바
+  var el2=document.getElementById('cohortNewBar'); if(!el2)return;
+  var tt2=tooltipBase(); tt2.mode='index'; tt2.intersect=false;
+  tt2.callbacks={label:function(c){return ' '+c.dataset.label+': '+c.raw.toLocaleString()+'명';}};
+  new Chart(el2,{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'초등→중등 전환',data:newComp.전환,backgroundColor:rgba(ORANGE,0.8),borderRadius:3,borderSkipped:false},
+    {label:'순수 신규',data:newComp.순수,backgroundColor:'rgba(107,114,128,0.5)',borderRadius:3,borderSkipped:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt2},
+    scales:{x:{stacked:true,ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+      y:{stacked:true,ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}}}}});
+
+  // 전환생 프로파일 레이더
+  radarChart('cohortProfile',[
+    {label:'전환생 초등 시절',data:[75.0,73.5,100,100],fill:true,backgroundColor:rgba(ORANGE,0.15),borderColor:ORANGE,pointBackgroundColor:ORANGE,borderWidth:2},
+    {label:'전환생 중등 첫달',data:[80.7,72.8,46,10],fill:true,backgroundColor:rgba(BLUE,0.12),borderColor:BLUE,pointBackgroundColor:BLUE,borderWidth:2},
+    {label:'전체 중등 평균',data:[50.3,46.2,60,6],fill:true,backgroundColor:rgba(RED,0.08),borderColor:RED,pointBackgroundColor:RED,borderWidth:1.5,borderDash:[4,3]}
+  ],['수행률','출석률','학습시간(상대)','스스로학습(상대)']);
+
+  // 수행률 반등 실체 분해
+  var el4=document.getElementById('cohortDecomp'); if(!el4)return;
+  var tt4=tooltipBase(); tt4.mode='index'; tt4.intersect=false;
+  tt4.callbacks={label:function(c){
+    if(c.raw===null) return null;
+    return ' '+c.dataset.label+': '+c.raw+'%';
+  }};
+  var sc4=scalesBase(); sc4.y.min=35; sc4.y.max=90;
+  sc4.y.ticks={color:'#6b7280',font:{size:10},callback:function(v){return v+'%';}};
+  var ctx4=el4.getContext('2d');
+  new Chart(ctx4,{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'전체 평균 (착시)',data:cohortData.map(function(d){return d.전체;}),
+      borderColor:BLUE,backgroundColor:gradFill(ctx4,BLUE),fill:true,tension:0.4,borderWidth:2,pointRadius:3},
+    {label:'1월 회원 (실제)',data:cohortData.map(function(d){return d.코호트;}),
+      borderColor:ORANGE,backgroundColor:'transparent',tension:0.4,borderWidth:2.5,pointRadius:4,borderDash:[6,3]},
+    {label:'전환생 수행률 (신규)',data:cohortData.map(function(d){return d.전환생;}),
+      borderColor:GREEN,backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:5}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#6b7280',font:{size:10},padding:10,boxWidth:12}},tooltip:tt4},
+    scales:sc4}});
+}
+
+// ═══════════════════════════════════════════════════════
+// buildElem
+// ═══════════════════════════════════════════════════════
+function buildElem(){
+  barChart('elem-perf-dist',BANDS,[{label:'초등',data:elemCross.count,colors:bandColors}]);
+  barChart('elem-cross-att',BANDS,[{label:'출석률',data:elemCross.att,colors:bandColors}]);
+  barChart('elem-cross-time',BANDS,[{label:'학습시간',data:elemCross.time,colors:bandColors}]);
+  lineChart('elem-monthly',MONTHS,[{label:'수행률',data:elemData.perf,color:ORANGE,fill:true}]);
+}
+
+// ═══════════════════════════════════════════════════════
+// 초기 렌더
+// ═══════════════════════════════════════════════════════
+
+// 툴팁 위치 보정
+document.addEventListener('mouseover', function(e) {
+  var tip = e.target.closest('.has-tip');
+  if (!tip) return;
+  var box = tip.querySelector('.tip-box');
+  if (!box) return;
+  var rect = tip.getBoundingClientRect();
+  // 상단 공간 부족하면 아래로
+  if (rect.top < 160) {
+    box.style.bottom = 'auto';
+    box.style.top = 'calc(100% + 8px)';
+  } else {
+    box.style.bottom = 'calc(100% + 8px)';
+    box.style.top = 'auto';
+  }
+  // 좌우 경계 보정
+  var boxRect = box.getBoundingClientRect();
+  if (boxRect.left < 8) {
+    box.style.left = '0';
+    box.style.transform = 'none';
+  } else if (boxRect.right > window.innerWidth - 8) {
+    box.style.left = 'auto';
+    box.style.right = '0';
+    box.style.transform = 'none';
+  } else {
+    box.style.left = '50%';
+    box.style.right = 'auto';
+    box.style.transform = 'translateX(-50%)';
+  }
+});
+
+// ── 참고 데이터 아코디언 차트
+var refBuilt = false;
+document.addEventListener('DOMContentLoaded', function(){
+  var details = document.querySelector('details');
+  if(details){
+    details.addEventListener('toggle', function(){
+      if(details.open && !refBuilt){
+        refBuilt = true;
+        var e1 = document.getElementById('ref-reason-bar');
+        if(e1){
+          var tt1 = tooltipBase();
+          tt1.callbacks = {label:function(c){return ' '+c.dataset.label+': '+c.raw.toLocaleString()+'건 ('+((c.raw/3912)*100).toFixed(1)+'%)';}};
+          new Chart(e1,{type:'bar',
+            data:{
+              labels:['학원','미학습','학습 시간 부족','학습 흥미저하','스스로 학습 안됨'],
+              datasets:[{label:'해지 건수',data:[968,854,729,509,188],
+                backgroundColor:[rgba(ORANGE,0.85),rgba(RED,0.8),rgba(YELLOW,0.8),rgba(PURPLE,0.7),rgba(BLUE,0.6)],
+                borderRadius:5,borderSkipped:false}]
+            },
+            options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+              plugins:{legend:{display:false},tooltip:tt1,
+                datalabels:{display:true,anchor:'center',align:'center',color:'#fff',font:{size:10,weight:'700'},formatter:function(v){return v===0?'':v;}}},
+              scales:{
+                x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:gridColor}},
+                y:{ticks:{color:'#6b7280',font:{size:11}},grid:{display:false}}
+              }
+            }
+          });
+        }
+        doughnutChart('ref-grade-donut',
+          ['7학년 (중1)','8학년 (중2)','9학년 (중3)'],
+          [1830,1300,649],
+          [rgba(ORANGE,0.85),rgba(BLUE,0.75),rgba(PURPLE,0.7)],'건');
+      }
+    });
+  }
+});
+
+
+window.addEventListener('load',function(){buildCharts('compare');built['compare']=true;});
+
+</script>
+</body>
+</html>
