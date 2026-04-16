@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>중등 홈런 종합 대시보드</title>
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Square+AC:wght@400;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Square+AC:wght@400;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Nanum+Square+AC:wght@400;700;800;900&display=swap" rel="stylesheet"></noscript>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
@@ -864,14 +867,21 @@ const bandColors=['#FF5A5A','#FFAA5A','#F5C842','#5BCC8A','#34d399'];
 // 탭 전환
 // ═══════════════════════════════════════════════════════
 var built={};
-function showTab(id){
+function showTab(id,_btn){
   document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
   var panel=document.getElementById('tab-'+id);
   if(panel) panel.classList.add('active');
-  if(event&&event.currentTarget) event.currentTarget.classList.add('active');
-  if(!built[id]){buildCharts(id);built[id]=true;}
+  var activeBtn=_btn||(typeof event!=='undefined'&&event&&event.currentTarget);
+  if(activeBtn) activeBtn.classList.add('active');
+  if(!built[id]){
+    requestAnimationFrame(function(){buildCharts(id);built[id]=true;});
+  }
 }
+document.addEventListener('DOMContentLoaded',function(){
+  var firstBtn=document.querySelector('.tab-btn.active');
+  showTab('compare',firstBtn);
+});
 function buildCharts(id){
   if(id==='compare')     buildCompare();
   if(id==='overview')    buildOverview();
